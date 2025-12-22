@@ -129,5 +129,4 @@ Thank you for contributing to **Xaytheon**.
 Your efforts help improve the project and the open-source community.
 
 
-* A Code of Conduct
-* A shorter or stricter version of this file
+
