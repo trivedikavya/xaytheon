@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign in – XAYTHEON</title>
+  <title>Sign in - XAYTHEON</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="style.css" />
 
@@ -11,6 +12,7 @@
     body {
       font-family: 'Eightgon', 'Researcher', 'OriginTech', sans-serif;
     }
+
     .auth-wrap {
       min-height: 100vh;
       display: grid;
@@ -18,6 +20,7 @@
       padding: 40px 16px;
       background: var(--bg-primary);
     }
+
     .auth-card {
       width: 100%;
       max-width: 420px;
@@ -27,23 +30,28 @@
       box-shadow: var(--shadow-md);
       padding: 24px;
     }
+
     .auth-title {
       font-size: 1.8em;
       margin-bottom: 8px;
       color: var(--text-primary);
     }
+
     .auth-sub {
       color: var(--text-secondary);
       margin-bottom: 20px;
     }
+
     .auth-form {
       display: grid;
       gap: 12px;
     }
+
     .auth-form label {
       font-weight: 600;
       color: var(--text-primary);
     }
+
     .auth-form input {
       padding: 12px 14px;
       border: 1px solid var(--border-color-strong);
@@ -54,33 +62,41 @@
       color: var(--text-primary);
       transition: border-color 0.3s ease;
     }
+
     .auth-form input:focus {
       border-color: var(--text-primary);
     }
+
     .auth-actions {
       display: flex;
       gap: 10px;
       align-items: center;
     }
+
     .muted {
       color: var(--text-muted);
       font-size: 0.95em;
     }
+
     .status {
       min-height: 1.2em;
       margin-top: 10px;
     }
+
     .center {
       text-align: center;
     }
+
     .center a {
       color: var(--link-color);
       text-decoration: none;
     }
+
     .center a:hover {
       color: var(--link-hover);
       text-decoration: underline;
     }
+
     .theme-toggle-auth {
       position: fixed;
       top: 20px;
@@ -98,14 +114,17 @@
       border-radius: 8px;
       z-index: 100;
     }
+
     .theme-toggle-auth:hover {
       background: var(--border-color);
       transform: scale(1.05);
     }
+
     .theme-toggle-auth:focus {
       outline: 2px solid var(--text-primary);
       outline-offset: 2px;
     }
+
     .theme-toggle-auth svg {
       width: 20px;
       height: 20px;
@@ -113,14 +132,60 @@
       fill: none;
       transition: all 0.3s ease;
     }
+
     .theme-toggle-auth:hover svg {
       transform: rotate(15deg);
+    }
+
+    .error-msg {
+      color: #dc2626;
+      background: #fee2e2;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      margin-top: 10px;
+    }
+
+    .success-msg {
+      color: #059669;
+      background: #d1fae5;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      margin-top: 10px;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .input-error {
+      border-color: #dc2626 !important;
     }
   </style>
 </head>
 
 <body>
-  
+
   <nav class="navbar">
     <div class="nav-container">
       <a class="logo" href="index.html" aria-label="Back to Home">
@@ -133,8 +198,8 @@
   </nav>
 
   <button class="theme-toggle-auth" id="theme-toggle-auth" aria-label="Toggle dark mode">
-    <svg class="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg class="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="5" />
       <line x1="12" y1="1" x2="12" y2="3" />
       <line x1="12" y1="21" x2="12" y2="23" />
@@ -146,48 +211,120 @@
       <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
     </svg>
   </button>
-  
+
   <div class="auth-wrap">
-    <div class="auth-card">
-      <div class="auth-title">Sign in</div>
-      <div class="auth-sub">Sign in using your email and password</div>
+  <div class="auth-card">
+    <div class="auth-title">Sign in</div>
+    <div class="auth-sub">Sign in using your email and password</div>
 
-      <form id="login-form" class="auth-form" autocomplete="on">
-        <label for="login-email">Email</label>
-        <input id="login-email" type="email" placeholder="you@example.com" required />
+    <form id="login-form" class="auth-form" autocomplete="on">
+      <label for="login-email">Email</label>
+      <input id="login-email" type="email" placeholder="you@example.com" required />
 
-        <label for="login-password">Password</label>
-        <input id="login-password" type="password" placeholder="••••••••" required />
-
-        <div class="auth-actions">
-          <button class="btn btn-primary" type="submit">Sign in</button>
-          <a class="btn btn-outline" href="index.html">Back</a>
-        </div>
-
-        <div id="login-status" class="status muted" aria-live="polite"></div>
-      </form>
-      
-      <div class="center muted" style="margin-top:12px;">
-        New here?
-        <a href="register.html">Create an account</a>
+      <label for="login-password">Password</label>
+      <div class="password-wrapper">
+        <input
+          id="login-password"
+          type="password"
+          placeholder="••••••••"
+          required
+        />
+        <button
+          type="button"
+          class="toggle-password"
+          aria-label="Show password"
+          aria-pressed="false"
+        >
+          <img
+            id="eye-icon"
+            src="https://img.icons8.com/?size=100&id=59814&format=png&color=000000"
+            alt="Show password"
+          />
+        </button>
       </div>
 
-      <div class="center muted" style="margin-top:12px;">
-        Authentication is handled securely by the Xaytheon backend.
+      <div class="auth-actions">
+        <button class="btn btn-primary" type="submit">Sign in</button>
+        <a class="btn btn-outline" href="index.html">Back</a>
       </div>
+
+      <div id="login-status" class="status muted" aria-live="polite"></div>
+    </form>
+
+    <div class="center muted" style="margin-top:12px;">
+      New here?
+      <a href="register.html">Create an account</a>
+    </div>
+
+    <div class="center muted" style="margin-top:12px;">
+      Authentication is handled securely by the Xaytheon backend.
     </div>
   </div>
+</div>
+
+<!-- Inline CSS -->
+<style>
+  .password-wrapper {
+    position: relative;
+  }
+
+  .password-wrapper input {
+    width: 100%;
+    padding-right: 2.8rem;
+  }
+
+  .toggle-password {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .toggle-password img {
+    width: 20px;
+    height: 20px;
+  }
+</style>
+
+<!-- Inline JS -->
+<script>
+  const toggleBtn = document.querySelector(".toggle-password");
+  const passwordInput = document.getElementById("login-password");
+  const eyeIcon = document.getElementById("eye-icon");
+
+  toggleBtn.addEventListener("click", function () {
+    const isHidden = passwordInput.type === "password";
+
+    passwordInput.type = isHidden ? "text" : "password";
+
+    eyeIcon.src = isHidden
+      ? "https://img.icons8.com/?size=100&id=7840&format=png&color=000000"
+      : "https://img.icons8.com/?size=100&id=59814&format=png&color=000000";
+
+    eyeIcon.alt = isHidden ? "Hide password" : "Show password";
+    toggleBtn.setAttribute("aria-pressed", isHidden);
+    toggleBtn.setAttribute(
+      "aria-label",
+      isHidden ? "Hide password" : "Show password"
+    );
+  });
+</script>
+
 
   <script src="auth.js"></script>
   <script>
     // Theme toggle functionality
     const themeToggle = document.getElementById('theme-toggle-auth');
     const htmlElement = document.documentElement;
-    
+
     // Load saved theme or default to light
     const savedTheme = localStorage.getItem('theme') || 'light';
     htmlElement.setAttribute('data-theme', savedTheme);
-    
+
     themeToggle.addEventListener('click', () => {
       const currentTheme = htmlElement.getAttribute('data-theme');
       const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -200,21 +337,106 @@
     const emailEl = document.getElementById("login-email");
     const passwordEl = document.getElementById("login-password");
     const statusEl = document.getElementById("login-status");
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.textContent;
+
+    function validateEmail(email) {
+      // More robust email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email) && email.length <= 254 && email.length >= 3;
+    }
+
+    function validatePassword(password) {
+      return typeof password === 'string' && password.length >= 8 && password.length <= 128;
+    }
+
+    function showError(message) {
+      statusEl.className = "error-msg";
+      statusEl.textContent = message;
+      statusEl.setAttribute("role", "alert");
+    }
+
+    function showSuccess(message) {
+      statusEl.className = "success-msg";
+      statusEl.textContent = message;
+    }
+
+    function setLoading(isLoading) {
+      submitBtn.disabled = isLoading;
+      if (isLoading) {
+        submitBtn.innerHTML = '<span class="spinner"></span>Signing in...';
+      } else {
+        submitBtn.textContent = originalBtnText;
+      }
+    }
+
+    function clearErrors() {
+      statusEl.className = "status muted";
+      statusEl.textContent = "";
+      emailEl.classList.remove("input-error");
+      passwordEl.classList.remove("input-error");
+    }
+
+    emailEl.addEventListener("input", clearErrors);
+    passwordEl.addEventListener("input", clearErrors);
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      statusEl.textContent = "Signing in…";
+      clearErrors();
+
+      const email = emailEl.value.trim();
+      const password = passwordEl.value;
+
+      if (!email) {
+        emailEl.classList.add("input-error");
+        showError("Please enter your email");
+        emailEl.focus();
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        emailEl.classList.add("input-error");
+        showError("Please enter a valid email address");
+        emailEl.focus();
+        return;
+      }
+
+      if (!password) {
+        passwordEl.classList.add("input-error");
+        showError("Please enter your password");
+        passwordEl.focus();
+        return;
+      }
+
+      if (!validatePassword(password)) {
+        passwordEl.classList.add("input-error");
+        showError("Password must be between 8 and 128 characters");
+        passwordEl.focus();
+        return;
+      }
+
+      setLoading(true);
 
       try {
-        await window.XAYTHEON_AUTH.login(
-          emailEl.value.trim(),
-          passwordEl.value
-        );
-        window.location.href = "index.html";
+        await window.XAYTHEON_AUTH.login(email, password);
+        showSuccess("Login successful!");
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 100);
       } catch (err) {
-        statusEl.textContent = err.message || "Login failed";
+        setLoading(false);
+        if (err.message.includes("fetch") || err.message.includes("network")) {
+          showError("Network error. Please check your connection and try again.");
+        } else if (err.message.includes("credentials")) {
+          emailEl.classList.add("input-error");
+          passwordEl.classList.add("input-error");
+          showError("Invalid email or password");
+        } else {
+          showError(err.message || "Login failed. Please try again.");
+        }
       }
     });
   </script>
 </body>
+
 </html>

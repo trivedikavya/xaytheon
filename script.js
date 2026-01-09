@@ -19,6 +19,67 @@ const shapes = {
 
 // Initialize the 3D scene
 function init() {
+ fix-loader-accessibility
+    // Get canvas element
+    const canvas = document.getElementById('three-canvas');
+    const container = document.querySelector('.canvas-container');
+    
+    // Create scene
+    scene = new THREE.Scene();
+    // Keep scene background transparent so the site stays white
+    // renderer will composite over the white page background
+    
+    // Create camera
+    const aspectRatio = container.clientWidth / container.clientHeight;
+    camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+    camera.position.set(5, 5, 5);
+    
+    // Create renderer
+    renderer = new THREE.WebGLRenderer({ 
+        canvas: canvas, 
+        antialias: true,
+        alpha: true // allow DOM/page background to show through
+    });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+    // Add lighting
+    setupLighting();
+    
+    // Load model: allow page to specify a different model via data-model
+    const modelPath = canvas && canvas.dataset.model ? canvas.dataset.model : 'assets/models/prism.glb';
+    loadGltfFromUrl(modelPath, undefined, () => {
+        console.warn('Falling back to primitive shape because prism.glb failed to load.');
+        safeCreatePrimitiveFallback();
+    });
+    
+    // Setup controls
+    setupControls();
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Hide loading screen
+    // and announce completion
+setTimeout(() => {
+    const loader = document.getElementById('loading-screen');
+    loader.classList.add('hidden');
+
+    // Screen reader announcement
+    const doneMsg = document.createElement('div');
+    doneMsg.setAttribute('role', 'status');
+    doneMsg.setAttribute('aria-live', 'polite');
+    doneMsg.classList.add('sr-only'); // visually hidden
+    doneMsg.textContent = 'XAYTHEON has finished loading.';
+    document.body.appendChild(doneMsg);
+}, 1000);
+
+    
+    // Start animation loop
+    animate();
+
   // Get canvas element
   const canvas = document.getElementById("three-canvas");
   const container = document.querySelector(".canvas-container");
@@ -72,6 +133,7 @@ function init() {
 
   // Start animation loop
   animate();
+ main
 }
 
 // Setup lighting
@@ -623,17 +685,97 @@ Have fun exploring! 🚀
 `);
 
 // ===================== GitHub Dashboard =====================
+// Cache management with TTL
+const GITHUB_CACHE = {
+  TTL: 10 * 60 * 1000, // 10 minutes
+  prefix: 'xaytheon:gh:',
+  
+  set(key, data) {
+    try {
+      const entry = {
+        data,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(this.prefix + key, JSON.stringify(entry));
+    } catch (e) {
+      console.warn('Cache set failed:', e);
+    }
+  },
+  
+  get(key) {
+    try {
+      const item = localStorage.getItem(this.prefix + key);
+      if (!item) return null;
+      
+      const entry = JSON.parse(item);
+      const age = Date.now() - entry.timestamp;
+      
+      if (age > this.TTL) {
+        this.remove(key);
+        return null;
+      }
+      
+      return entry.data;
+    } catch (e) {
+      console.warn('Cache get failed:', e);
+      return null;
+    }
+  },
+  
+  remove(key) {
+    try {
+      localStorage.removeItem(this.prefix + key);
+    } catch (e) {
+      console.warn('Cache remove failed:', e);
+    }
+  },
+  
+  clear() {
+    try {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith(this.prefix));
+      keys.forEach(k => localStorage.removeItem(k));
+    } catch (e) {
+      console.warn('Cache clear failed:', e);
+    }
+  }
+};
+
+// Debounce helper
+function debounce(func, delay) {
+  let timeoutId;
+  return function(...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  };
+}
+
+// API call tracker for rate limiting
+const API_TRACKER = {
+  lastCall: 0,
+  minInterval: 1000, // 1 second between calls
+  
+  canCall() {
+    const now = Date.now();
+    return (now - this.lastCall) >= this.minInterval;
+  },
+  
+  recordCall() {
+    this.lastCall = Date.now();
+  }
+};
+
 function initGithubDashboard() {
   const form = document.getElementById("github-form");
   if (!form) return; // section not present
 
-
   const usernameInput = document.getElementById("gh-username");
   const clearBtn = document.getElementById("gh-clear");
   const status = document.getElementById("github-status");
+  let isLoading = false;
+  
   usernameInput.addEventListener('input', () => {
-  setStatus('');
-});
+    setStatus('');
+  });
 
 
 
@@ -646,23 +788,58 @@ function initGithubDashboard() {
       usernameInput.value = saved.username;
       loadGithubDashboard(saved.username);
     }
-  } catch {}
+  } catch { }
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const username = usernameInput.value.trim();
+
+    // Validate username presence
     if (!username) {
       setStatus("Please enter a GitHub username.", "error");
+      usernameInput.focus();
       return;
     }
+
+    // Validate username format (GitHub username rules)
+    const usernameRegex = /^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/;
+    if (!usernameRegex.test(username)) {
+      setStatus("Please enter a valid GitHub username (alphanumeric characters and hyphens only).", "error");
+      usernameInput.focus();
+      return;
+    }
+
+    // Validate username length
+    if (username.length < 1 || username.length > 39) {
+      setStatus("GitHub username must be between 1 and 39 characters.", "error");
+      usernameInput.focus();
+      return;
+    }
+    
+    // Prevent multiple simultaneous requests
+    if (isLoading) {
+      setStatus("Please wait, loading in progress...", "error");
+      return;
+    }
+    
+    // Rate limiting check
+    if (!API_TRACKER.canCall()) {
+      setStatus("Please wait a moment before making another request.", "error");
+      return;
+    }
+    
     // Save only username
     localStorage.setItem("xaytheon:ghCreds", JSON.stringify({ username }));
-    loadGithubDashboard(username);
+    loadGithubDashboard(username).finally(() => {
+      isLoading = false;
+    });
   });
 
   clearBtn.addEventListener("click", () => {
     // Remove saved username
     localStorage.removeItem("xaytheon:ghCreds");
+    // Clear cache
+    GITHUB_CACHE.clear();
     // Clear input field
     const usernameInput = document.getElementById("gh-username");
     if (usernameInput) usernameInput.value = "";
@@ -727,8 +904,32 @@ async function loadGithubDashboard(username) {
       status.style.color = level === "error" ? "#b91c1c" : "#111827";
     }
   };
+  
+  // Disable submit button during load
+  const submitBtn = document.querySelector('#github-form button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Loading...';
+  }
+
+  // Check cache first
+  const cacheKey = `dashboard:${username}`;
+  const cached = GITHUB_CACHE.get(cacheKey);
+  
+  if (cached) {
+    statusMsg("Loading from cache (fetching fresh data in background)...");
+    renderDashboardData(cached, username);
+    // Fetch fresh data in background
+    fetchAndCacheDashboard(username).catch(console.error);
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Load Dashboard';
+    }
+    return;
+  }
 
   try {
+    API_TRACKER.recordCall();
     statusMsg("Loading profile…");
     // Profile
     const user = await ghJson(
@@ -802,10 +1003,139 @@ async function loadGithubDashboard(username) {
       };
     }
 
+    // Cache the data
+    const dashboardData = {
+      user,
+      repos: top,
+      events: events.slice(0, 10),
+      fetchedAt: Date.now()
+    };
+    GITHUB_CACHE.set(cacheKey, dashboardData);
+
     statusMsg("Done");
   } catch (e) {
     console.error(e);
     statusMsg(e.message || "Failed to load GitHub data", "error");
+  } finally {
+    // Re-enable submit button
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Load Dashboard';
+    }
+  }
+}
+
+// Helper function to fetch and cache dashboard data
+async function fetchAndCacheDashboard(username) {
+  const headers = {};
+  const cacheKey = `dashboard:${username}`;
+  
+  try {
+    const user = await ghJson(
+      `https://api.github.com/users/${encodeURIComponent(username)}`,
+      headers
+    );
+    
+    const repos = await ghJson(
+      `https://api.github.com/users/${encodeURIComponent(
+        username
+      )}/repos?per_page=100&sort=updated`,
+      headers
+    );
+    
+    const top = [...repos]
+      .filter((r) => !r.fork)
+      .sort((a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0))
+      .slice(0, 8);
+    
+    const events = await ghJson(
+      `https://api.github.com/users/${encodeURIComponent(
+        username
+      )}/events/public?per_page=25`,
+      headers
+    );
+    
+    const dashboardData = {
+      user,
+      repos: top,
+      events: events.slice(0, 10),
+      fetchedAt: Date.now()
+    };
+    
+    GITHUB_CACHE.set(cacheKey, dashboardData);
+    renderDashboardData(dashboardData, username);
+    
+    const status = document.getElementById("github-status");
+    if (status) {
+      status.textContent = "Updated with fresh data";
+      status.style.color = "#059669";
+    }
+  } catch (e) {
+    console.warn("Background fetch failed:", e);
+  }
+}
+
+// Helper function to render cached dashboard data
+function renderDashboardData(data, username) {
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+  const avatar = document.getElementById("gh-avatar");
+  
+  // Render user profile
+  if (avatar) avatar.src = data.user.avatar_url;
+  set("gh-name", data.user.name || "—");
+  set("gh-login", `@${data.user.login}`);
+  set("gh-bio", data.user.bio || "");
+  set("gh-followers", data.user.followers ?? 0);
+  set("gh-following", data.user.following ?? 0);
+  set("gh-repos-count", (data.user.public_repos ?? data.repos.length) + "");
+  
+  // Render repos
+  renderRepos(data.repos);
+  
+  // Render activity
+  renderActivity(data.events);
+  
+  // Render contributions chart
+  const setDisplay = (id, disp) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = disp;
+  };
+  const contribNote = document.getElementById("gh-contrib-note");
+  const container = document.getElementById("gh-contrib-svg");
+  
+  if (contribNote)
+    contribNote.textContent =
+      "Full-year chart via third-party (ghchart.rshah.org). If it fails, we will show an approximate heatmap.";
+  setDisplay("gh-contrib-note", "block");
+  
+  if (container) {
+    container.innerHTML = '<div class="muted">Loading public contributions…</div>';
+    const img = new Image();
+    img.src = `https://ghchart.rshah.org/${encodeURIComponent(username)}`;
+    img.alt = `${username}'s contributions (third-party chart)`;
+    img.style.maxWidth = "100%";
+    img.style.height = "auto";
+    img.referrerPolicy = "no-referrer";
+    img.onload = () => {
+      container.innerHTML = "";
+      container.appendChild(img);
+    };
+    img.onerror = () => {
+      try {
+        const svg = renderEventHeatmap(data.events);
+        container.innerHTML = svg;
+        if (contribNote)
+          contribNote.textContent =
+            "Approximate heatmap based on recent public activity.";
+      } catch (e) {
+        console.warn("Event heatmap failed", e);
+        container.innerHTML =
+          '<div class="muted">No activity found to render a heatmap.</div>';
+      }
+    };
   }
 }
 
@@ -817,6 +1147,19 @@ async function ghJson(url, headers = {}) {
       ...headers,
     },
   });
+  
+  // Check for rate limiting
+  if (res.status === 403 || res.status === 429) {
+    const resetTime = res.headers.get('X-RateLimit-Reset');
+    const remaining = res.headers.get('X-RateLimit-Remaining');
+    
+    if (remaining === '0' || res.status === 429) {
+      const resetDate = resetTime ? new Date(parseInt(resetTime) * 1000) : null;
+      const waitTime = resetDate ? Math.ceil((resetDate - Date.now()) / 60000) : 'unknown';
+      throw new Error(`⚠️ GitHub API rate limit exceeded. Please try again in ${waitTime} minutes.`);
+    }
+  }
+  
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`GitHub API ${res.status}: ${text}`);
@@ -832,19 +1175,23 @@ function renderRepos(repos) {
     return;
   }
   list.innerHTML = repos
-    .map(
-      (r) => `
+    .map((r) => {
+      const safeRepo = JSON.stringify({
+        full_name: r.full_name,
+        language: r.language,
+        html_url: r.html_url
+      }).replace(/"/g, "&quot;");
+
+      return `
         <div class="repo-item">
-            <div class="repo-name"><a href="${
-              r.html_url
-            }" target="_blank" rel="noopener">${escapeHtml(
-        r.full_name
-      )}</a></div>
-            ${
-              r.description
-                ? `<div class="repo-desc">${escapeHtml(r.description)}</div>`
-                : ""
-            }
+            <div class="repo-name"><a href="${r.html_url
+        }" target="_blank" rel="noopener" onclick='trackRepoView(${safeRepo})'>${escapeHtml(
+          r.full_name
+        )}</a></div>
+            ${r.description
+          ? `<div class="repo-desc">${escapeHtml(r.description)}</div>`
+          : ""
+        }
             <div class="repo-meta">
                 <span>★ ${r.stargazers_count || 0}</span>
                 <span>⑂ ${r.forks_count || 0}</span>
@@ -853,7 +1200,7 @@ function renderRepos(repos) {
             </div>
         </div>
     `
-    )
+    })
     .join("");
 }
 
@@ -871,13 +1218,12 @@ function renderActivity(events) {
       const repo = ev.repo?.name || "";
       const when = timeAgo(ev.created_at);
       const what = describeEvent(ev);
-      return `<li class="activity-item"><div>${escapeHtml(what || type)}${
-        repo
-          ? ` in <a href="https://github.com/${repo}" target="_blank" rel="noopener">${escapeHtml(
-              repo
-            )}</a>`
-          : ""
-      }</div><div class="activity-time">${when}</div></li>`;
+      return `<li class="activity-item"><div>${escapeHtml(what || type)}${repo
+        ? ` in <a href="https://github.com/${repo}" target="_blank" rel="noopener">${escapeHtml(
+          repo
+        )}</a>`
+        : ""
+        }</div><div class="activity-time">${when}</div></li>`;
     })
     .join("");
 }
@@ -887,9 +1233,8 @@ function describeEvent(ev) {
     case "PushEvent":
       return `Pushed ${ev.payload?.commits?.length || 0} commit(s)`;
     case "CreateEvent":
-      return `Created ${ev.payload?.ref_type || "item"} ${
-        ev.payload?.ref || ""
-      }`;
+      return `Created ${ev.payload?.ref_type || "item"} ${ev.payload?.ref || ""
+        }`;
     case "IssuesEvent":
       return `Issue ${ev.payload?.action} #${ev.payload?.issue?.number}`;
     case "PullRequestEvent":
@@ -925,9 +1270,9 @@ function escapeHtml(str) {
   return String(str).replace(
     /[&<>"']/g,
     (s) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
-        s
-      ])
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
+      s
+    ])
   );
 }
 
@@ -971,16 +1316,14 @@ async function fetchContributionSvg(username, token) {
     w.contributionDays.forEach((d, y) => {
       const cx = gap + x * (cell + gap);
       const cy = gap + y * (cell + gap);
-      rects += `<rect x="${cx}" y="${cy}" width="${cell}" height="${cell}" rx="2" ry="2" fill="${
-        d.color || "#ebedf0"
-      }">
+      rects += `<rect x="${cx}" y="${cy}" width="${cell}" height="${cell}" rx="2" ry="2" fill="${d.color || "#ebedf0"
+        }">
                 <title>${d.date}: ${d.contributionCount} contributions</title>
             </rect>`;
     });
   });
-  const label = `<text x="${gap}" y="${
-    height - 4
-  }" font-size="10" fill="#666">Total: ${cal.totalContributions}</text>`;
+  const label = `<text x="${gap}" y="${height - 4
+    }" font-size="10" fill="#666">Total: ${cal.totalContributions}</text>`;
   return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img">${rects}${label}</svg>`;
 }
 
@@ -1058,9 +1401,8 @@ function renderEventHeatmap(events) {
             </rect>`;
     }
   }
-  const label = `<text x="${gap}" y="${
-    height - 4
-  }" font-size="10" fill="#666">Approx. last ${daysBack} days</text>`;
+  const label = `<text x="${gap}" y="${height - 4
+    }" font-size="10" fill="#666">Approx. last ${daysBack} days</text>`;
   return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img">${rects}${label}</svg>`;
 }
 
@@ -1250,3 +1592,270 @@ window.addEventListener("resize", () => {
 });
 
 
+// ===================== Recommendation Engine =====================
+const HISTORY_KEY = "xaytheon:view_history";
+
+// Track a repository view
+// Track a repository view
+window.trackRepoView = async function (repo) {
+  try {
+    let history = [];
+
+    // Check if user is logged in
+    const isAuthed = window.XAYTHEON_AUTH && window.XAYTHEON_AUTH.isAuthenticated();
+
+    if (isAuthed) {
+      try {
+        const res = await window.XAYTHEON_AUTH.authenticatedFetch(`${window.location.protocol === "https:" ? "https://your-api-domain.com/api/user" : "http://localhost:5000/api/user"}/history`);
+        if (res.ok) {
+          history = await res.json();
+        }
+      } catch (e) { console.warn("Failed to fetch fresh history", e); }
+    }
+
+    // If empty (network fail or not authed), try local storage
+    if (history.length === 0) {
+      history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+    }
+
+    // Remove if already exists (to move to top)
+    const filtered = history.filter(h => h.full_name !== repo.full_name);
+
+    // Add to top
+    filtered.unshift({
+      full_name: repo.full_name,
+      language: repo.language,
+      html_url: repo.html_url,
+      visited_at: Date.now()
+    });
+
+    // Limit to 50
+    if (filtered.length > 50) filtered.length = 50;
+
+    // Save to LocalStorage (always as backup/cache)
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(filtered));
+
+    // Save to Backend if authed
+    if (isAuthed) {
+      await window.XAYTHEON_AUTH.authenticatedFetch(
+        `${window.location.protocol === "https:" ? "https://your-api-domain.com/api/user" : "http://localhost:5000/api/user"}/history`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ history: filtered })
+        }
+      ).catch(e => console.warn("Failed to sync history to backend", e));
+
+      // Auto-update recommendations
+      initRecommendations();
+    }
+
+  } catch (e) {
+    console.warn("Tracking failed", e);
+  }
+};
+
+async function initRecommendations() {
+  const recArea = document.getElementById("recommendations-area");
+  const emptyArea = document.getElementById("rec-empty");
+  const list = document.getElementById("rec-list");
+
+  if (!recArea || !list) {
+    return;
+  }
+
+  if (!window.XAYTHEON_AUTH || !window.XAYTHEON_AUTH.isAuthenticated()) {
+    recArea.classList.add("hidden");
+    if (emptyArea) emptyArea.classList.add("hidden");
+    const authReq = document.querySelector("[data-requires-auth]");
+    if (authReq) authReq.style.display = "none";
+    return;
+  } else {
+    const authReq = document.querySelector("[data-requires-auth]");
+    if (authReq) authReq.style.display = "block";
+  }
+
+  let history = [];
+  let localHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+
+  // Try to load from backend if authenticated and merge
+  try {
+    const res = await window.XAYTHEON_AUTH.authenticatedFetch(`${window.location.protocol === "https:" ? "https://your-api-domain.com/api/user" : "http://localhost:5000/api/user"}/history`);
+    if (res.ok) {
+      const remoteHistory = await res.json();
+
+      // Merge Logic
+      if (remoteHistory.length === 0 && localHistory.length > 0) {
+        // Push local to backend
+        history = localHistory;
+        window.XAYTHEON_AUTH.authenticatedFetch(
+          `${window.location.protocol === "https:" ? "https://your-api-domain.com/api/user" : "http://localhost:5000/api/user"}/history`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ history: localHistory })
+          }
+        );
+      } else {
+        // Intelligent Merge
+        const map = new Map();
+        remoteHistory.forEach(h => map.set(h.full_name, h));
+        localHistory.forEach(h => {
+          if (!map.has(h.full_name)) map.set(h.full_name, h);
+        });
+        history = Array.from(map.values()).sort((a, b) => (b.visited_at || 0) - (a.visited_at || 0)).slice(0, 50);
+      }
+
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    } else {
+      throw new Error("Backend failed");
+    }
+  } catch (e) {
+    console.warn("Could not fetch remote history, falling back to local", e);
+    history = localHistory;
+  }
+
+  // Track a search interest
+  const SEARCH_HISTORY_KEY = "xaytheon:search_history";
+  window.trackSearchInterest = function (topic, language) {
+    if (!topic && !language) return;
+    let history = JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || "[]");
+
+    // Add to top
+    history.unshift({
+      topic: topic || "",
+      language: language || "",
+      ts: Date.now()
+    });
+
+    // Limit to 20
+    if (history.length > 20) history.length = 20;
+
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+  };
+
+  // Analyze history (clicks)
+  const languages = {};
+  const topics = {};
+
+  history.forEach(h => {
+    if (h.language) languages[h.language] = (languages[h.language] || 0) + 2; // Weight clicks higher
+    // We don't strictly track topics in repo view history yet, but we could if we stored them.
+  });
+
+  // Analyze search history
+  const searchHistory = JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || "[]");
+  searchHistory.forEach(s => {
+    if (s.language) languages[s.language] = (languages[s.language] || 0) + 1;
+    if (s.topic) topics[s.topic] = (topics[s.topic] || 0) + 1;
+  });
+
+  const topLangs = Object.entries(languages)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(e => e[0]);
+
+  const topTopics = Object.entries(topics)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(e => e[0]);
+
+  // Fallback query if no data
+  let q = "";
+  if (topLangs.length === 0 && topTopics.length === 0) {
+    q = "stars:>1000";
+    recArea.classList.remove("hidden");
+    if (emptyArea) emptyArea.classList.add("hidden");
+  } else {
+    // Build complex query
+    const parts = [];
+    topLangs.forEach(l => parts.push(`language:${l}`));
+    topTopics.forEach(t => parts.push(`topic:${t}`));
+    q = parts.join(" ");
+  }
+
+  // Fetch recommendations
+  recArea.classList.remove("hidden");
+  emptyArea.classList.add("hidden");
+
+  if (!list.hasChildNodes() || list.innerText.includes("Loading")) {
+    list.innerHTML = '<div class="muted">Loading personal recommendations...</div>';
+  }
+
+  try {
+    const encodedQ = encodeURIComponent(q);
+    const url = `https://api.github.com/search/repositories?q=${encodedQ}&sort=stars&order=desc&per_page=20`;
+
+    const data = await ghJson(url);
+
+    // Client side filter
+    const viewedNames = new Set(history.map(h => h.full_name));
+    const recommendations = (data.items || [])
+      .filter(r => !viewedNames.has(r.full_name))
+      .slice(0, 6);
+
+    if (recommendations.length === 0) {
+      // Retry with broader query if specific failed
+      if (q !== "stars:>500") {
+        const fallbackUrl = `https://api.github.com/search/repositories?q=stars:>1000&sort=stars&order=desc&per_page=10`;
+        const fallbackData = await ghJson(fallbackUrl);
+        if (fallbackData && fallbackData.items) {
+          renderRecommendationCards(fallbackData.items.slice(0, 6));
+          return;
+        }
+      }
+
+      // HARD FALLBACK
+      const hardcoded = [
+        { full_name: "facebook/react", name: "react", description: "Hardcoded Fallback 1", language: "JavaScript", stargazers_count: 200000, owner: { login: "facebook" }, html_url: "https://github.com/facebook/react" },
+        { full_name: "vuejs/vue", name: "vue", description: "Hardcoded Fallback 2", language: "JavaScript", stargazers_count: 180000, owner: { login: "vuejs" }, html_url: "https://github.com/vuejs/vue" }
+      ];
+      renderRecommendationCards(hardcoded);
+      return;
+    }
+
+    renderRecommendationCards(recommendations);
+
+  } catch (e) {
+    console.error("Recs failed", e);
+    // HARD FALLBACK on error
+    const hardcoded = [
+      { full_name: "facebook/react", name: "react", description: "Error Fallback 1", language: "JavaScript", stargazers_count: 200000, owner: { login: "facebook" }, html_url: "https://github.com/facebook/react" },
+      { full_name: "vuejs/vue", name: "vue", description: "Error Fallback 2", language: "JavaScript", stargazers_count: 180000, owner: { login: "vuejs" }, html_url: "https://github.com/vuejs/vue" }
+    ];
+    renderRecommendationCards(hardcoded);
+  }
+}
+
+function renderRecommendationCards(repos) {
+  const list = document.getElementById("rec-list");
+  if (!list) return;
+  list.innerHTML = repos.map(r => {
+    const safeRepo = JSON.stringify({
+      full_name: r.full_name,
+      language: r.language,
+      html_url: r.html_url
+    }).replace(/"/g, "&quot;");
+
+    return `
+    <div class="card repo-card">
+       <div class="repo-header">
+         <div class="repo-name">
+           <a href="${r.html_url}" target="_blank" onclick='trackRepoView(${safeRepo})'>${escapeHtml(r.name)}</a>
+         </div>
+         <span class="repo-lang">${r.language || ''}</span>
+       </div>
+       <div class="repo-desc">${escapeHtml(r.description || 'No description')}</div>
+       <div class="repo-meta">
+         <span>★ ${r.stargazers_count}</span>
+         <span class="repo-owner">by ${escapeHtml(r.owner.login)}</span>
+       </div>
+    </div>
+    `;
+  }).join("");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Wait a bit for auth to initialize before fetching recs
+  setTimeout(initRecommendations, 1500);
+});

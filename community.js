@@ -185,11 +185,42 @@
   }
 
   async function update(){
+    const language = (langEl.value||'').trim();
+    const topic = (topicEl.value||'').trim();
+    const daysValue = (windowEl.value||'').trim();
+    const kValue = (kEl.value||'').trim();
+
+    // Validate language
+    if (language && language.length > 20) {
+      setStatus('Language must be 20 characters or less.', 'error');
+      return;
+    }
+
+    // Validate topic
+    if (topic && topic.length > 50) {
+      setStatus('Topic must be 50 characters or less.', 'error');
+      return;
+    }
+
+    // Validate days
+    const days = parseInt(daysValue, 10);
+    if (isNaN(days) || days < 1 || days > 365) {
+      setStatus('Days must be a number between 1 and 365.', 'error');
+      return;
+    }
+
+    // Validate k
+    const k = parseInt(kValue, 10);
+    if (isNaN(k) || k < 1 || k > 20) {
+      setStatus('K must be a number between 1 and 20.', 'error');
+      return;
+    }
+
     const filters = {
-      language: (langEl.value||'').trim(),
-      topic: (topicEl.value||'').trim(),
-      days: parseInt(windowEl.value||'30',10) || 30,
-      k: Math.max(1, Math.min(20, parseInt(kEl.value||'10',10)))
+      language,
+      topic,
+      days,
+      k: Math.max(1, Math.min(20, k))
     };
     const cacheKey = keyFor(filters);
     setStatus('Loading trending repositories…');
