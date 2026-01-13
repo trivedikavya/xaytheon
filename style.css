@@ -445,21 +445,6 @@ body.eightgon-page {
   transform: rotate(15deg);
 }
 
-/* Hamburger Menu */
-.hamburger {
-  display: none;
-  flex-direction: column;
-  cursor: pointer;
-}
-
-.bar {
-  width: 25px;
-  height: 3px;
-  background: var(--text-primary);
-  margin: 3px 0;
-  transition: 0.3s;
-}
-
 /* Hero Section */
 .hero {
   min-height: 100vh;
@@ -962,6 +947,11 @@ a:hover {
   .github-status {
     grid-column: span 1;
     width: 100%;
+  }
+
+  .github-form .btn {
+    max-width: none;
+    align-self: stretch;
   }
 
   /* Fix for the Map getting cut off or being too tall */
