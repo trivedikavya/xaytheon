@@ -10,6 +10,7 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="analytics.css" />
+  <link rel="stylesheet" href="features_analytics.css" />
 
   <!-- Chart.js for data visualization -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -66,6 +67,14 @@
               <p class="section-subtitle">Track your GitHub growth over time with interactive visualizations</p>
             </div>
             <div class="header-actions">
+              <div id="connection-status" class="connection-status hidden">
+                <span class="status-dot"></span>
+                <span class="status-text">OFFLINE</span>
+              </div>
+              <div class="last-updated" id="last-updated-info"
+                style="display: none; font-size: 0.85rem; color: var(--text-muted); margin-right: 1rem;">
+                Last updated: <span id="last-updated-time">-</span>
+              </div>
               <button class="btn btn-outline" id="refresh-data-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="23 4 23 10 17 10"></polyline>
@@ -328,6 +337,8 @@
 
   <!-- Main app script -->
   <script src="script.js"></script>
+  <!-- Offline Manager -->
+  <script src="offline-manager.js"></script>
   <!-- Analytics-specific script -->
   <script src="analytics.js"></script>
 </body>

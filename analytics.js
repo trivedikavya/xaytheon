@@ -8,6 +8,7 @@ const API_BASE_URL = 'http://localhost:3000/api';
 let currentUser = null;
 let analyticsData = [];
 let charts = {};
+let offlineManager;
 
 // Chart color schemes
 const COLORS = {
@@ -24,11 +25,18 @@ const COLORS = {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('📊 Initializing Analytics Dashboard...');
 
+    // Initialize offline manager
+    offlineManager = new OfflineManager();
+    await offlineManager.initDB();
+
     // Check authentication
     await checkAuthentication();
 
     // Set up event listeners
     setupEventListeners();
+
+    // Monitor network status
+    setupNetworkMonitoring();
 
     // Set default date range (last 30 days)
     setDefaultDateRange(30);
@@ -38,6 +46,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadAnalyticsData();
     }
 });
+
+/**
+ * Monitor network status
+ */
+/**
+ * Monitor network status
+ */
+function setupNetworkMonitoring() {
+    window.addEventListener('online', () => {
+        updateOnlineStatus(true);
+        showToast('You are back online! Syncing data...', 'success');
+        loadAnalyticsData(true);
+    });
+    window.addEventListener('offline', () => {
+        updateOnlineStatus(false);
+        showToast('You are offline. Some features may be limited.', 'error');
+    });
+    updateOnlineStatus(navigator.onLine);
+}
+
+/**
+ * Update UI based on online status
+ */
+function updateOnlineStatus(isOnline) {
+    const statusEl = document.getElementById('connection-status');
+    const refreshBtn = document.getElementById('refresh-data-btn');
+
+    if (isOnline) {
+        statusEl.classList.add('hidden');
+        statusEl.innerHTML = '<span class="status-dot online"></span><span class="status-text">ONLINE</span>';
+        refreshBtn.disabled = false;
+        // Hide badge after delay if needed, or keep logic simple
+        statusEl.style.display = 'none';
+    } else {
+        statusEl.classList.remove('hidden');
+        statusEl.innerHTML = '<span class="status-dot offline"></span><span class="status-text">OFFLINE</span>';
+        statusEl.style.display = 'flex';
+        // refreshBtn.disabled = true; // Optional: disable refresh while offline
+    }
+}
 
 /**
  * Check if user is authenticated
@@ -161,48 +209,91 @@ function setDefaultDateRange(days) {
 async function loadAnalyticsData(forceRefresh = false) {
     if (!currentUser) return;
 
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+    const cacheKey = `analytics_${startDate}_${endDate}`;
+    const lastUpdatedEl = document.getElementById('last-updated-time');
+    const lastUpdatedInfo = document.getElementById('last-updated-info');
+
+    if (!startDate || !endDate) {
+        console.warn('Please select both start and end dates');
+        return;
+    }
+
     try {
-        const startDate = document.getElementById('start-date').value;
-        const endDate = document.getElementById('end-date').value;
+        // Try to fetch from API if online
+        if (navigator.onLine) {
+            const token = localStorage.getItem('authToken');
 
-        if (!startDate || !endDate) {
-            console.warn('Please select both start and end dates');
-            return;
-        }
+            // Fetch snapshots
+            const response = await fetch(
+                `${API_BASE_URL}/analytics/snapshots?startDate=${startDate}&endDate=${endDate}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                }
+            );
 
-        const token = localStorage.getItem('authToken');
-
-        // Fetch snapshots
-        const response = await fetch(
-            `${API_BASE_URL}/analytics/snapshots?startDate=${startDate}&endDate=${endDate}`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
+            if (!response.ok) {
+                throw new Error('Failed to fetch analytics data');
             }
-        );
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch analytics data');
+            const data = await response.json();
+            analyticsData = data.snapshots || [];
+
+            // Cache the fresh data
+            await offlineManager.saveData(cacheKey, analyticsData);
+
+            // Update "Last updated" text
+            lastUpdatedEl.textContent = 'Just now';
+            lastUpdatedInfo.style.display = 'inline-block';
+
+        } else {
+            // Offline: fallback to cache
+            throw new Error('Offline');
         }
-
-        const data = await response.json();
-        analyticsData = data.snapshots || [];
-
-        if (analyticsData.length === 0) {
-            showEmptyState();
-            return;
-        }
-
-        // Update UI
-        updateMetrics();
-        renderCharts();
-        updateTable();
 
     } catch (error) {
-        console.error('Error loading analytics data:', error);
-        showError('Failed to load analytics data. Please try again.');
+        console.warn('Fetching unsuccessful, attempting cache...', error);
+
+        // Try loading from cache
+        const cachedRecord = await offlineManager.loadData(cacheKey);
+
+        if (cachedRecord && cachedRecord.data) {
+            analyticsData = cachedRecord.data;
+
+            if (navigator.onLine) {
+                showError('Could not fetch new data. Showing cached version.');
+            } else {
+                // Determine user-friendly offline message
+                console.log('✅ Loaded data from cache');
+            }
+
+            // Update "Last updated" timestamp
+            lastUpdatedEl.textContent = offlineManager.formatTime(cachedRecord.timestamp);
+            lastUpdatedInfo.style.display = 'inline-block';
+
+        } else {
+            if (!navigator.onLine) {
+                showError('You are offline and no cached data is available for this date range.');
+            } else {
+                console.error('Error loading analytics data:', error);
+                showError('Failed to load analytics data. Please try again.');
+            }
+            return;
+        }
     }
+
+    if (analyticsData.length === 0) {
+        showEmptyState();
+        return;
+    }
+
+    // Update UI
+    updateMetrics();
+    renderCharts();
+    updateTable();
 }
 
 /**
@@ -625,19 +716,54 @@ function showEmptyState() {
 }
 
 /**
+ * Show toast notification
+ */
+function showToast(message, type = 'info') {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    let icon = 'ℹ️';
+    if (type === 'success') icon = '✅';
+    if (type === 'error') icon = '❌';
+
+    toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <span class="toast-message">${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.style.animation = 'toast-out 0.3s ease-in forwards';
+        toast.addEventListener('animationend', () => {
+            toast.remove();
+            if (container.children.length === 0) {
+                container.remove();
+            }
+        });
+    }, 4000);
+}
+
+/**
  * Show success message
  */
 function showSuccess(message) {
-    // You can implement a toast notification here
     console.log('✅', message);
-    alert(message);
+    showToast(message, 'success');
 }
 
 /**
  * Show error message
  */
 function showError(message) {
-    // You can implement a toast notification here
     console.error('❌', message);
-    alert(message);
+    showToast(message, 'error');
 }
