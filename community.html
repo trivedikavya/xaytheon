@@ -27,7 +27,10 @@
           <li><a class="nav-link" href="index.html#home" data-i18n="nav.home">Home</a></li>
           <li><a class="nav-link" href="github.html" data-i18n="nav.dashboard">GitHub Dashboard</a></li>
           <li><a class="nav-link" href="analytics.html" data-i18n="nav.analytics">Analytics</a></li>
+          <li><a class="nav-link" href="heatmap.html">Activity Map</a></li>
+          <li><a class="nav-link" href="sentiment.html">Sentiment</a></li>
           <li><a class="nav-link" href="watchlist.html" data-i18n="nav.watchlist">Watchlist</a></li>
+          <li><a class="nav-link" href="compare.html">Compare</a></li>
           <li><a class="nav-link" href="achievements.html" data-i18n="nav.achievements">Achievements</a></li>
           <li><a class="nav-link" href="community.html" data-i18n="nav.community">Community Highlights</a></li>
           <li><a class="nav-link" href="health.html">Health Auditor</a></li>
@@ -94,7 +97,8 @@
                 </div>
                 <div class="field-group" style="grid-column: span 3;">
                   <label for="trend-k">Top K</label>
-                  <input id="trend-k" type="number" min="1" max="20" value="10" />
+                  <input id="trend-k" type="text" inputmode="numeric" />
+
                 </div>
                 <button class="btn btn-primary" type="submit" data-i18n="common.submit">Update</button>
                 <button class="btn btn-outline" type="button" id="trend-reset"

@@ -14,6 +14,8 @@
 
   <!-- Chart.js for data visualization -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Socket.io Client -->
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 
   <!-- Supabase SDK & auth bootstrap -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/dist/umd/supabase.min.js"></script>
@@ -32,7 +34,11 @@
         <ul class="nav-menu">
           <li><a class="nav-link" href="index.html#home" data-i18n="nav.home">Home</a></li>
           <li><a class="nav-link" href="github.html" data-i18n="nav.dashboard">GitHub Dashboard</a></li>
+          <li><a class="nav-link active" href="heatmap.html">Activity Map</a></li>
+          <li><a class="nav-link" href="sentiment.html">Sentiment</a></li>
           <li><a class="nav-link" href="watchlist.html" data-i18n="nav.watchlist">Watchlist</a></li>
+          <li><a class="nav-link" href="compare.html">Compare</a></li>
+          <li><a class="nav-link" href="achievements.html">Achievements</a></li>
           <li><a class="nav-link" href="community.html" data-i18n="nav.community">Community Highlights</a></li>
           <li><a class="nav-link" href="health.html">Health Auditor</a></li>
           <li><a class="nav-link" href="explore.html" data-i18n="nav.explore">Explore by Topic</a></li>
@@ -77,6 +83,12 @@
               <div class="last-updated" id="last-updated-info"
                 style="display: none; font-size: 0.85rem; color: var(--text-muted); margin-right: 1rem;">
                 Last updated: <span id="last-updated-time">-</span>
+              </div>
+              <div id="live-indicator" class="live-indicator"
+                style="display: none; align-items: center; gap: 6px; color: var(--color-success); font-size: 0.85rem; margin-right: 1rem; font-weight: 600;">
+                <span class="live-dot"
+                  style="width: 8px; height: 8px; background-color: currentColor; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite;"></span>
+                LIVE
               </div>
               <button class="btn btn-outline" id="refresh-data-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

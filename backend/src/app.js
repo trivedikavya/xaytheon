@@ -9,7 +9,11 @@ const watchlistRoutes = require("./routes/watchlist.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const analyticsRoutes = require("./routes/analytics.routes");
 const achievementsRoutes = require("./routes/achievements.routes");
-const i18nRoutes = require("./routes/i18n.routes");
+const pushRoutes = require("./routes/push.routes");
+const compareRoutes = require("./routes/compare.routes");
+const collabRoutes = require("./routes/collab.routes");
+const heatmapRoutes = require("./routes/heatmap.routes");
+const sentimentRoutes = require("./routes/sentiment.routes");
 
 const app = express();
 
@@ -96,7 +100,11 @@ app.use("/api/watchlists", watchlistRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/achievements", achievementsRoutes);
-app.use("/api/i18n", i18nRoutes);
+app.use("/api/push", pushRoutes);
+app.use("/api/compare", compareRoutes);
+app.use("/api/collab", collabRoutes);
+app.use("/api/heatmap", heatmapRoutes);
+app.use("/api/sentiment", sentimentRoutes);
 
 app.use((err, req, res, next) => {
   console.error("Error:", err);

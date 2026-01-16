@@ -95,7 +95,12 @@
   function setStatus(msg, level = 'info') {
     if (!statusEl) return;
     statusEl.textContent = msg;
-    statusEl.style.color = level === 'error' ? '#b91c1c' : '#111827';
+    statusEl.style.color =
+      level === 'error'
+        ? '#ef4444'
+        : document.documentElement.dataset.theme === 'dark'
+          ? '#e5e7eb'
+          : '#111827';
   }
 
   function renderCards(items) {
@@ -231,6 +236,7 @@
     return null;
   }
 
+
   function updateCacheInfo(key, entry) {
     if (!cacheInfoEl) return;
     if (entry) {
@@ -264,6 +270,7 @@
       }
     } catch { }
   }
+
 
   // Debounced update function
   const debouncedUpdate = debounce(async function update() {
@@ -370,7 +377,12 @@
     topicEl.value = '';
     windowEl.value = '30';
     kEl.value = '10';
+
+    if (statusEl) statusEl.textContent = '';
+    update();
+
     debouncedUpdate();
+
   });
 
   // Initial load with defaults
