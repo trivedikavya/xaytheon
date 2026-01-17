@@ -232,7 +232,7 @@ body {
 .nav-menu {
   display: flex;
   list-style: none;
-  gap: 20px;
+  gap: 10px;
 }
 
 .nav-link {
@@ -241,6 +241,7 @@ body {
   font-weight: 500;
   transition: all 0.3s ease;
   position: relative;
+  font-size: 0.9em;
 }
 
 .nav-link:hover {

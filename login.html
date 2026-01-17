@@ -7,6 +7,7 @@
   <title>Sign in - XAYTHEON</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="style.css" />
+  <script src="theme.js"></script>
   <script defer src="i18n.js"></script>
 
   <style>
@@ -196,6 +197,7 @@
         <li><a class="nav-link" href="index.html" data-i18n="nav.home">Home</a></li>
         <li><a class="nav-link" href="github.html" data-i18n="nav.dashboard">GitHub Dashboard</a></li>
         <li><a class="nav-link" href="community.html" data-i18n="nav.community">Community Highlights</a></li>
+        <li><a class="nav-link" href="health.html">Health Auditor</a></li>
         <li><a class="nav-link" href="explore.html" data-i18n="nav.explore">Explore by Topic</a></li>
         <li><a class="nav-link nav-search-btn" href="search.html" data-i18n="nav.search" title="Search"><i
               class="ri-search-2-line"></i></a></li>
@@ -324,21 +326,7 @@
 
   <script src="auth.js"></script>
   <script>
-    // Theme toggle functionality
-    const themeToggle = document.getElementById('theme-toggle-auth');
-    const htmlElement = document.documentElement;
-
-    // Load saved theme or default to light
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    htmlElement.setAttribute('data-theme', savedTheme);
-
-    themeToggle.addEventListener('click', () => {
-      const currentTheme = htmlElement.getAttribute('data-theme');
-      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      htmlElement.setAttribute('data-theme', newTheme);
-      localStorage.setItem('theme', newTheme);
-    });
-
+   
     // Login form handling
     const form = document.getElementById("login-form");
     const emailEl = document.getElementById("login-email");
