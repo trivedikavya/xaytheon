@@ -1,6 +1,8 @@
 /**
  * XAYTHEON - Health Monitor Frontend
  */
+import { calculateConsistencyScore } from "../consistencyScore.js";
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const buildFeed = document.getElementById('build-feed');

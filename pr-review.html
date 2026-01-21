@@ -7,6 +7,7 @@
     <title>AI PR Review Assistant — XAYTHEON</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=3">
     <link rel="stylesheet" href="pr-review.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/dist/umd/supabase.min.js"></script>
@@ -15,22 +16,7 @@
 
 <body class="eightgon-page">
     <div class="page-wrapper">
-        <nav class="navbar">
-            <div class="nav-container">
-                <a class="logo" href="index.html">
-                    <img class="logo-img" src="assets/logo/thelogo.png" alt="XAYTHEON logo">
-                </a>
-                <ul class="nav-menu">
-                    <li><a class="nav-link" href="index.html#home">Home</a></li>
-                    <li><a class="nav-link" href="github.html">Dashboard</a></li>
-                    <li><a class="nav-link active" href="pr-review.html">PR Review</a></li>
-                    <li><a class="nav-link" href="infra-monitor.html">Infra Monitor</a></li>
-                    <li><a class="nav-link" href="health.html">Health Auditor</a></li>
-                    <li><a class="nav-link" href="risk-detector.html">Risk Detector</a></li>
-                    <li id="auth-area"></li>
-                </ul>
-            </div>
-        </nav>
+        <div id="header-placeholder"></div>
 
         <main class="pr-container">
             <header class="pr-header">
@@ -144,7 +130,12 @@
     </div>
 
     <script src="pr-review.js"></script>
-    <script src="script.js"></script>
-</body>
+    <script src="boilerplate/boilerplate-loader.js"></script>
+    
+<div id="footer-placeholder"></div>
+
 
 </html>
+
+
+

@@ -1,4 +1,6 @@
 // Explore by Topic — Graph + List View (FULLY WORKING)
+import { calculateTrendScore } from "./trendScore.js";
+
 
 (function () {
   const form = document.getElementById("explore-form");
@@ -320,8 +322,24 @@
       });
 
       renderGraph();
-      renderRepoList(exploreData.repos);
-      setStatus(`Added ${repos.length} repos`);
+
+// Apply trend scoring and sort repositories
+exploreData.repos = exploreData.repos
+  .map(repo => ({
+    ...repo,
+    trendScore: calculateTrendScore({
+      stars7d: repo.stars_7d || 0,
+      stars30d: repo.stars_30d || 0,
+      forks30d: repo.forks_count || 0,
+      lastCommit: repo.updated_at,
+      totalStars: repo.stargazers_count || 0,
+    }),
+  }))
+  .sort((a, b) => b.trendScore - a.trendScore);
+
+renderRepoList(exploreData.repos);
+setStatus(`Added ${repos.length} repos`);
+
     } catch (e) {
       console.error(e);
       setStatus(e.message || "Failed to expand topic", "error");
@@ -414,9 +432,25 @@ if (limitNum < 10 || limitNum > 100) {
         addLink(repoId, `topic:${base}`);
       });
 
-      renderGraph();
-      renderRepoList(exploreData.repos);
-      setStatus(`Loaded ${repos.length} repositories`);
+     renderGraph();
+
+// Apply trend scoring and sort repositories
+exploreData.repos = exploreData.repos
+  .map(repo => ({
+    ...repo,
+    trendScore: calculateTrendScore({
+      stars7d: repo.stars_7d || 0,
+      stars30d: repo.stars_30d || 0,
+      forks30d: repo.forks_count || 0,
+      lastCommit: repo.updated_at,
+      totalStars: repo.stargazers_count || 0,
+    }),
+  }))
+  .sort((a, b) => b.trendScore - a.trendScore);
+
+renderRepoList(exploreData.repos);
+setStatus(`Loaded ${repos.length} repositories`);
+
     } catch (e) {
       console.error(e);
       setStatus(e.message || "Failed to load data", "error");
@@ -463,3 +497,4 @@ if (limitNum < 10 || limitNum > 100) {
   // Initial load with defaults
   debouncedExplore();
 })();
+console.log(exploreData.repos.map(r => r.trendScore));

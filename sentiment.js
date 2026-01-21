@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let chartInstance = null;
     let analysisData = null;
+    let currentRepo = null;
 
     analyzeBtn.addEventListener('click', handleAnalyze);
     exportBtn.addEventListener('click', handleExport);
@@ -25,14 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
     handleAnalyze();
 
     async function handleAnalyze() {
-        const repo = repoInput.value.trim() || 'xaytheon/core';
+        currentRepo = repoInput.value.trim() || 'xaytheon/core';
 
         showLoading(true);
         try {
-            const response = await fetch(`/api/sentiment/analyze?repo=${repo}`);
+            const response = await fetch(
+                `/api/sentiment/analyze?repo=${currentRepo}`
+            );
             if (!response.ok) throw new Error('Analysis failed');
 
-            analysisData = await response.json();
+          analysisData = await response.json();
+window.analysisData = analysisData; // 👈 add this line
+
             renderDashboard(analysisData);
         } catch (error) {
             console.error(error);
@@ -42,11 +47,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderDashboard(data) {
+    async function renderDashboard(data) {
         resultsArea.classList.remove('hidden');
         exportBtn.disabled = false;
 
-        // 1. Overview Cards
+        /* 1. Overview Cards */
         const avg = parseFloat(data.overview.averageSentiment);
         avgSentimentEl.textContent = avg > 0 ? `+${avg}` : avg;
 
@@ -67,14 +72,28 @@ document.addEventListener('DOMContentLoaded', () => {
         posRatioEl.textContent = `${data.overview.positiveRatio}%`;
         negRatioEl.textContent = `${data.overview.negativeRatio}%`;
 
-        // 2. Timeline Chart
+        /* 2. Timeline Chart */
         renderChart(data.timeline);
 
-        // 3. Heated Discussions
+        /* 3. Heated Discussions */
         renderHeatedDiscussions(data.heatedDiscussions);
 
-        // 4. Contributors
-        renderContributors(data.topContributors);
+        /* 4. Contributors (WITH CONSISTENCY SCORE) */
+        const enrichedContributors = data.topContributors.map(c => {
+            // Simple, explainable consistency heuristic:
+            // - More sustained participation → higher score
+            // - One-time bursts → penalty
+
+            const baseScore = Math.min(100, c.totalComments * 5);
+            const burstPenalty = c.totalComments > 30 ? 0.7 : 1;
+
+            return {
+                ...c,
+                consistencyScore: Math.round(baseScore * burstPenalty),
+            };
+        });
+
+        renderContributors(enrichedContributors);
     }
 
     function renderChart(timeline) {
@@ -93,33 +112,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     borderWidth: 2,
                     tension: 0.4,
                     fill: true,
-                    pointBackgroundColor: '#10b981'
-                },
-                {
-                    label: 'Zero Line',
-                    data: timeline.map(() => 0),
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                    borderWidth: 1,
-                    pointRadius: 0,
-                    borderDash: [5, 5]
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: { color: '#94a3b8' }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#94a3b8' }
-                    }
-                },
-                plugins: {
-                    legend: { display: false }
-                }
+                plugins: { legend: { display: false } }
             }
         });
     }
@@ -129,7 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = '';
 
         if (items.length === 0) {
-            container.innerHTML = '<li class="empty-state">No significantly negative discussions found. Great job!</li>';
+            container.innerHTML =
+                '<li class="empty-state">No significantly negative discussions found.</li>';
             return;
         }
 
@@ -160,10 +159,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="contributor-cell">
                         <img src="${c.avatar}" class="c-avatar"/>
                         <span>${c.user}</span>
+                        <span
+                          class="consistency-badge"
+                          title="Measures how regularly a contributor participates over time"
+                        >
+                          Consistency: ${c.consistencyScore}
+                        </span>
                     </div>
                 </td>
-                <td style="color: #10b981; font-weight: bold;">${c.averageScore}</td>
-                <td class="text-right">${c.totalComments}</td>
+                <td style="color:#10b981;font-weight:bold;">
+                    ${c.averageScore}
+                </td>
+                <td class="text-right">
+                    ${c.totalComments}
+                </td>
             `;
             container.appendChild(tr);
         });
@@ -183,21 +192,17 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleExport() {
         const element = document.getElementById('capture-area');
         try {
-            exportBtn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Generating...';
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                backgroundColor: '#0f172a',
-                useCORS: true
-            });
+            exportBtn.innerHTML = 'Generating...';
+            const canvas = await html2canvas(element, { scale: 2 });
             const link = document.createElement('a');
-            link.download = `sentiment-report-${new Date().getTime()}.png`;
-            link.href = canvas.toDataURL(); // Image export is simpler/faster for this demo than jsPDF for complex layout
+            link.download = `sentiment-report-${Date.now()}.png`;
+            link.href = canvas.toDataURL();
             link.click();
-            exportBtn.innerHTML = '<i class="ri-file-pdf-line"></i> Export Report';
+            exportBtn.innerHTML = 'Export Report';
         } catch (e) {
             console.error(e);
             alert('Export failed');
-            exportBtn.innerHTML = '<i class="ri-file-pdf-line"></i> Export Report';
+            exportBtn.innerHTML = 'Export Report';
         }
     }
 });
