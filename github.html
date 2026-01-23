@@ -27,12 +27,8 @@
 
     <!-- Auth Bootstrap -->
     <script defer src="auth.js"></script>
-    <script>
-        const theme = localStorage.getItem("xaytheon-theme")
-        if (theme === 'dark') {
-          document.documentElement.classList.add("dark-theme")
-        }
-    </script>
+    <script defer src="i18n.js"></script>
+    <script src="theme.js"></script>
     <style>
  .section-title{
   font-family:VT323;
@@ -203,33 +199,7 @@
  }
 
     </style>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#6366f1" />
-  <title>GitHub Dashboard — XAYTHEON</title>
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
-
-  <!-- Supabase SDK & auth bootstrap -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/dist/umd/supabase.min.js"></script>
-  <script defer src="auth.js"></script>
-  <script defer src="i18n.js"></script>
-  <script>
-    const theme = localStorage.getItem("theme")
-    if (theme) {
-      document.documentElement.setAttribute("data-theme", theme)
-    }
-  </script>
-
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css" />
-  <script src="theme.js"></script>
-
-  <style>
     /* ===================================
        GLOBAL VARIABLES & RESETS
        =================================== */
