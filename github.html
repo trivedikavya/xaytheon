@@ -382,6 +382,78 @@
             </div>
           </section>
 
+              <!-- Average Per Day -->
+              <div class="activity-stat-card">
+                <div class="activity-icon avg">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18" />
+                    <path d="m19 9-5 5-4-4-3 3" />
+                  </svg>
+                </div>
+                <div class="activity-value" id="avg-daily">0.0</div>
+                <div class="activity-label">Avg Per Day</div>
+              </div>
+            </div>
+            <!-- Contribution Heatmap -->
+
+            <div class="contribution-heatmap-card">
+              <div class="heatmap-header">
+                <h4 class="card-title">Contribution Activity</h4>
+                <div class="heatmap-legend">
+                  <span class="legend-label">Less</span>
+                  <div class="legend-box level-0"></div>
+                  <div class="legend-box level-1"></div>
+                  <div class="legend-box level-2"></div>
+                  <div class="legend-box level-3"></div>
+                  <div class="legend-box level-4"></div>
+                  <span class="legend-label">More</span>
+                </div>
+              </div>
+
+              <div class="heatmap-container">
+                <div class="heatmap-wrapper">
+                  <!-- Weekday Labels -->
+                  <div class="weekday-labels">
+                    <div class="weekday-label">Mon</div>
+                    <div class="weekday-label"></div>
+                    <div class="weekday-label">Wed</div>
+                    <div class="weekday-label"></div>
+                    <div class="weekday-label">Fri</div>
+                    <div class="weekday-label"></div>
+                    <div class="weekday-label"></div>
+                  </div>
+
+                  <!-- Month Labels -->
+                  <div id="month-labels" class="month-labels"></div>
+
+    <!-- Scripts -->
+    <script defer src="auth.js"></script>
+    <script defer src="i18n.js"></script>
+    <script src="theme.js"></script>
+    <script src="github.js"></script>
+    <script src="boilerplate/boilerplate-loader.js"></script>
+      </section>
+    </main>
+                  <!-- Grid Container -->
+                  <div class="grid-container">
+                    <div id="contribution-heatmap" class="contribution-grid"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="heatmap-tooltip" class="heatmap-tooltip"></div>
+            </div>
+
+            <!-- Activity Patterns -->
+
+            <div class="activity-patterns-card">
+              <h4 class="card-title">Activity Patterns</h4>
+              <div class="chart-container">
+                <canvas id="activity-chart" class="activity-chart"></canvas>
+              </div>
+            </div>
+          </section>
         </div>
 
       </div>
