@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Register – XAYTHEON</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="style.css" />
+  <script src="boilerplate/boilerplate-loader.js"></script>
+  
 
   <style>
     body {
       font-family: 'Eightgon', 'Researcher', 'OriginTech', sans-serif;
     }
+
     .auth-wrap {
       min-height: 100vh;
       display: grid;
@@ -18,6 +22,7 @@
       padding: 40px 16px;
       background: var(--bg-primary);
     }
+
     .auth-card {
       width: 100%;
       max-width: 420px;
@@ -27,23 +32,28 @@
       box-shadow: var(--shadow-md);
       padding: 24px;
     }
+
     .auth-title {
       font-size: 1.8em;
       margin-bottom: 8px;
       color: var(--text-primary);
     }
+
     .auth-sub {
       color: var(--text-secondary);
       margin-bottom: 20px;
     }
+
     .auth-form {
       display: grid;
       gap: 12px;
     }
+
     .auth-form label {
       font-weight: 600;
       color: var(--text-primary);
     }
+
     .auth-form input {
       padding: 12px 14px;
       border: 1px solid var(--border-color-strong);
@@ -54,25 +64,31 @@
       color: var(--text-primary);
       transition: border-color 0.3s ease;
     }
+
     .auth-form input:focus {
       border-color: var(--text-primary);
     }
+
     .auth-actions {
       display: flex;
       gap: 10px;
       align-items: center;
     }
+
     .status {
       min-height: 1.2em;
       margin-top: 10px;
     }
+
     .muted {
       color: var(--text-muted);
       font-size: 0.95em;
     }
+
     .center {
       text-align: center;
     }
+
     .theme-toggle-auth {
       position: fixed;
       top: 20px;
@@ -90,14 +106,17 @@
       border-radius: 8px;
       z-index: 100;
     }
+
     .theme-toggle-auth:hover {
       background: var(--border-color);
       transform: scale(1.05);
     }
+
     .theme-toggle-auth:focus {
       outline: 2px solid var(--text-primary);
       outline-offset: 2px;
     }
+
     .theme-toggle-auth svg {
       width: 20px;
       height: 20px;
@@ -105,9 +124,11 @@
       fill: none;
       transition: all 0.3s ease;
     }
+
     .theme-toggle-auth:hover svg {
       transform: rotate(15deg);
     }
+
     .error-msg {
       color: #dc2626;
       background: #fee2e2;
@@ -116,6 +137,7 @@
       font-size: 0.9em;
       margin-top: 10px;
     }
+
     .success-msg {
       color: #059669;
       background: #d1fae5;
@@ -124,24 +146,30 @@
       font-size: 0.9em;
       margin-top: 10px;
     }
+
     .btn-primary:disabled {
       opacity: 0.6;
       cursor: not-allowed;
     }
+
     .spinner {
       display: inline-block;
       width: 14px;
       height: 14px;
-      border: 2px solid rgba(255,255,255,0.3);
+      border: 2px solid rgba(255, 255, 255, 0.3);
       border-top-color: #fff;
       border-radius: 50%;
       animation: spin 0.6s linear infinite;
       margin-right: 6px;
       vertical-align: middle;
     }
+
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
+
     .input-error {
       border-color: #dc2626 !important;
     }
@@ -150,9 +178,11 @@
 
 <body>
 
+  <div id="header-placeholder"></div>
+
   <button class="theme-toggle-auth" id="theme-toggle-auth" aria-label="Toggle dark mode">
-    <svg class="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg class="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="5" />
       <line x1="12" y1="1" x2="12" y2="3" />
       <line x1="12" y1="21" x2="12" y2="23" />
@@ -169,17 +199,27 @@
     <div class="auth-card">
       <div class="auth-title">Create account</div>
       <div class="auth-sub">Register using your email and password</div>
+      <div id="auth-error" class="auth-error" aria-live="assertive"></div>
 
       <form id="register-form" class="auth-form">
         <label for="reg-email">Email</label>
-        <input id="reg-email" type="email" required />
+        <input id="reg-email" name="email" type="email" autocomplete="email" required placeholder="Enter your email"/>
+
 
         <label for="reg-password">Password</label>
-        <input id="reg-password" type="password" required />
+        <input id="reg-password" name="password" type="password" autocomplete="new-password" required placeholder="Enter a secure password" />
+
 
         <div class="auth-actions">
           <button class="btn btn-primary" type="submit">Register</button>
           <a class="btn btn-outline" href="login.html">Back</a>
+        </div>
+
+        <div class="center muted" style="margin-top:16px;">
+          Already have an account?
+          <a href="login.html" style="color: var(--text-primary); font-weight: 600;">
+            Login
+          </a>
         </div>
 
         <div class="center muted" style="margin-top:12px;">
@@ -194,20 +234,7 @@
 
   <script src="auth.js"></script>
   <script>
-    // Theme toggle functionality
-    const themeToggle = document.getElementById('theme-toggle-auth');
-    const htmlElement = document.documentElement;
-    
-    // Load saved theme or default to light
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    htmlElement.setAttribute('data-theme', savedTheme);
-    
-    themeToggle.addEventListener('click', () => {
-      const currentTheme = htmlElement.getAttribute('data-theme');
-      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      htmlElement.setAttribute('data-theme', newTheme);
-      localStorage.setItem('theme', newTheme);
-    });
+
 
     // Register form handling
     const form = document.getElementById("register-form");
@@ -224,8 +251,34 @@
     }
 
     function validatePassword(password) {
-      return typeof password === 'string' && password.length >= 8 && password.length <= 128;
+      if (typeof password !== "string" || password.length < 8 || password.length > 128) {
+        return "Password must be between 8 and 128 characters.";
+      }
+
+      if (!/[a-z]/.test(password)) {
+        return "Password must include at least one lowercase letter.";
+      }
+
+      if (!/[A-Z]/.test(password)) {
+        return "Password must include at least one uppercase letter.";
+      }
+
+      if (!/\d/.test(password)) {
+        return "Password must include at least one number.";
+      }
+
+      if (!/[@$!%*?&()[\]{}\-_=+|;:'",.<>\/\\^~`#]/.test(password)) {
+        return "Password must include at least one special character.";
+      }
+
+      const weakPasswords = ["password", "12345678", "qwerty", "abc123"];
+      if (weakPasswords.includes(password.toLowerCase())) {
+        return "This password is too common. Please choose a stronger one.";
+      }
+
+      return true;
     }
+
 
     function showError(message) {
       statusEl.className = "error-msg";
@@ -257,6 +310,21 @@
     emailEl.addEventListener("input", clearErrors);
     passwordEl.addEventListener("input", clearErrors);
 
+    function getAuthErrorMessage(err) {
+  if (!err) return "Something went wrong. Please try again.";
+
+  // If backend sends JSON error
+  if (err.message) return err.message;
+
+  // If using error codes
+  if (err.code === "USER_EXISTS") return "An account with this email already exists.";
+  if (err.code === "INVALID_EMAIL") return "Please enter a valid email address.";
+  if (err.code === "WEAK_PASSWORD") return "Password does not meet security requirements.";
+
+  return "Registration failed. Please try again later.";
+}
+
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       clearErrors();
@@ -285,9 +353,10 @@
         return;
       }
 
-      if (!validatePassword(password)) {
+      const passwordValidationResult = validatePassword(password);
+      if (passwordValidationResult !== true) {
         passwordEl.classList.add("input-error");
-        showError("Password must be between 8 and 128 characters");
+        showError(passwordValidationResult);
         passwordEl.focus();
         return;
       }
@@ -302,16 +371,26 @@
         }, 1500);
       } catch (err) {
         setLoading(false);
-        if (err.message.includes("fetch") || err.message.includes("network")) {
-          showError("Network error. Please check your connection and try again.");
-        } else if (err.message.includes("exists") || err.message.includes("already")) {
+        // console.error("Registration error:", err);
+
+
+        const message = getAuthErrorMessage(err);
+        showError(message);
+
+        // Highlight field for known registration errors
+        if (err.code === "USER_EXISTS") {
           emailEl.classList.add("input-error");
-          showError("An account with this email already exists");
-        } else {
-          showError(err.message || "Registration failed. Please try again.");
         }
       }
+
     });
   </script>
-</body>
+  <script src="theme.js"></script>
+<div id="footer-placeholder"></div>
+
+
 </html>
+
+
+
+

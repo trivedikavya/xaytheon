@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Repository Comparison — XAYTHEON</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="compare.css" />
+    <link rel="stylesheet" href="style.css?v=3">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+    <!-- Supabase SDK & Auth -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/dist/umd/supabase.min.js"></script>
+    <script defer src="auth.js"></script>
+    <script defer src="i18n.js"></script>
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2canvas for export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+
+<body class="eightgon-page">
+    <div class="content">
+        <div id="header-placeholder"></div>
+
+        <main class="compare-container">
+            <header class="compare-header">
+                <h1 class="compare-title" data-i18n="compare.title">Repository Comparison</h1>
+                <p class="compare-subtitle" data-i18n="compare.subtitle">Compare side-by-side metrics and health
+                    insights</p>
+            </header>
+
+            <div class="compare-controls">
+                <div class="input-grid">
+                    <div class="repo-input-wrapper">
+                        <input type="text" id="repo-1" placeholder="owner/repo (e.g. mrdoob/three.js)"
+                            class="repo-field" />
+                    </div>
+                    <div class="repo-input-wrapper">
+                        <input type="text" id="repo-2" placeholder="owner/repo (e.g. pmndrs/three-fiber)"
+                            class="repo-field" />
+                    </div>
+                    <div class="repo-input-wrapper">
+                        <input type="text" id="repo-3" placeholder="owner/repo (optional)" class="repo-field" />
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button id="compare-btn" class="btn btn-primary">
+                        <i class="ri-arrow-left-right-line"></i> <span data-i18n="compare.analyze">Analyze &
+                            Compare</span>
+                    </button>
+                    <button id="export-pdf" class="btn btn-outline" disabled title="Analyze first to export">
+                        <i class="ri-file-pdf-line"></i> <span data-i18n="compare.export">Export</span>
+                    </button>
+                </div>
+                <div id="compare-status" class="status-message"></div>
+            </div>
+
+            <div id="comparison-results" class="comparison-grid hidden">
+                <!-- Visual Insights Section -->
+                <section class="results-section">
+                    <div class="section-badge" data-i18n="compare.visualInsights">Visual Insights</div>
+                    <div class="charts-container">
+                        <div class="chart-card">
+                            <h3 data-i18n="compare.healthChart">Health & Activity Radar</h3>
+                            <div class="chart-wrapper">
+                                <canvas id="radarChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3 data-i18n="compare.statsChart">Key Metrics Comparison</h3>
+                            <div class="chart-wrapper">
+                                <canvas id="barChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- side-by-side Data Section -->
+                <section class="results-section">
+                    <div class="section-badge" data-i18n="compare.dataSheet">Data Sheet</div>
+                    <div class="comparison-table-wrapper">
+                        <table class="comparison-table">
+                            <thead>
+                                <tr id="table-head">
+                                    <th data-i18n="compare.metric">Metric</th>
+                                    <!-- Dynamic reponames here -->
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <!-- Dynamic rows here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Repository Detailed Cards -->
+                <section class="results-section">
+                    <div class="section-badge" data-i18n="compare.repoProfiles">Repository Profiles</div>
+                    <div id="repo-profiles" class="repo-cards-container">
+                        <!-- Dynamic cards here -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Skeleton Loading State -->
+            <div id="loading-state" class="comparison-grid hidden">
+                <div class="skeleton-chart"></div>
+                <div class="skeleton-table"></div>
+            </div>
+        </main>
+
+     <div id="footer-placeholder"></div>
+    </div>
+
+    <script src="theme.js"></script>
+    <script src="compare.js"></script>
+    <script src="boilerplate/boilerplate-loader.js"></script>
+    
+</body>
+
+</html>
+
+

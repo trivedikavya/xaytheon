@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Collaboration Workspace — XAYTHEON</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="collaboration.css" />
+    <link rel="stylesheet" href="style.css?v=3">
+    <!-- Supabase SDK & Auth -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/dist/umd/supabase.min.js"></script>
+    <script defer src="auth.js"></script>
+    <script defer src="i18n.js"></script>
+
+    <!-- Socket.IO Client -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+
+<body class="eightgon-page">
+    <div class="page-wrapper">
+        <div id="header-placeholder"></div>
+
+        <main class="collab-container">
+            <header class="collab-header">
+                <h1 class="collab-title">Shared Workspace</h1>
+                <div class="room-info">
+                    <span class="room-id">Room: <span id="room-id-display">Connecting...</span></span>
+                    <span id="connection-status" class="status-badge">Connecting...</span>
+                </div>
+                <button id="invite-btn" class="btn btn-primary share-btn">
+                    🔗 Invite Teammate
+                </button>
+            </header>
+
+            <div class="collab-grid">
+                <!-- Main Workspace Area -->
+                <section class="workspace-area">
+                    <div class="card workspace-card">
+                        <div class="card-header">
+                            <h3>Active Watchlist</h3>
+                            <div class="live-indicator">
+                                <span class="pulse"></span> Live
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="placeholder-text">
+                                Repository items and shared tasks will appear here.
+                                Modifications made by any user in this room will be synced instantly.
+                            </p>
+                            <div id="shared-list" class="shared-list">
+                                <!-- Dynamic content -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Sidebar: Presence & Activity -->
+                <aside class="collab-sidebar">
+                    <!-- Online Users -->
+                    <div class="card sidebar-card">
+                        <div class="card-header">
+                            <h4>Online Users</h4>
+                        </div>
+                        <div class="card-body">
+                            <ul id="user-list" class="user-list">
+                                <!-- Dynamic user items -->
+                                <li class="muted">Waiting for others...</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Activity Feed -->
+                    <div class="card sidebar-card">
+                        <div class="card-header">
+                            <h4>Live Activity</h4>
+                        </div>
+                        <div class="card-body">
+                            <div id="activity-feed" class="activity-feed">
+                                <!-- Dynamic activity logs -->
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </main>
+        <div id="footer-placeholder"></div>
+    </div>
+
+    <script src="theme.js"></script>
+    <script src="collab-cursors.js"></script>
+    <script src="collaboration.js"></script>
+    <script src="boilerplate/boilerplate-loader.js"></script>
+
+</body>
+
+</html>
