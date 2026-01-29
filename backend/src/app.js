@@ -25,6 +25,7 @@ const aiRoutes = require("./routes/ai.routes");
 const riskRoutes = require("./routes/risk.routes");
 const analyzerRoutes = require("./routes/analyzer.routes");
 const releaseRoutes = require("./routes/release.routes");
+const greenCodeRoutes = require("./routes/green-code.routes");
 
 const app = express();
 
@@ -152,6 +153,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/risk", riskRoutes);
 app.use("/api/analyzer", analyzerRoutes);
 app.use("/api/release", releaseRoutes);
+app.use("/api/green-code", greenCodeRoutes);
 
 app.use((err, req, res, next) => {
   console.error("Error:", err);
