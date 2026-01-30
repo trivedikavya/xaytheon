@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architectural Drift Detector - Xaytheon</title>
+    <link rel="stylesheet" href="arch-drift.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <h1 class="nav-title">🏗️ Architectural Drift Detector</h1>
+            <div class="nav-actions">
+                <button id="refreshBtn" class="btn-secondary">
+                    <span>🔄</span> Refresh
+                </button>
+                <a href="index.html" class="btn-secondary">← Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Input Section -->
+        <section class="input-section">
+            <div class="card">
+                <h2>Repository Analysis</h2>
+                <div class="input-grid">
+                    <div class="form-group">
+                        <label>Repository Owner</label>
+                        <input type="text" id="ownerInput" placeholder="e.g., facebook">
+                    </div>
+                    <div class="form-group">
+                        <label>Repository Name</label>
+                        <input type="text" id="repoInput" placeholder="e.g., react">
+                    </div>
+                    <div class="form-group">
+                        <label>Architecture Pattern</label>
+                        <select id="architectureSelect">
+                            <option value="layered">Layered Architecture</option>
+                            <option value="mvc">MVC</option>
+                            <option value="cleanArchitecture">Clean Architecture</option>
+                            <option value="hexagonal">Hexagonal (Ports & Adapters)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <button id="analyzeBtn" class="btn-primary">
+                            🔍 Analyze Architecture
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Metrics Dashboard -->
+        <section id="metricsSection" class="metrics-section hidden">
+            <div class="metrics-grid">
+                <div class="metric-card critical">
+                    <div class="metric-icon">⚠️</div>
+                    <div class="metric-content">
+                        <div class="metric-value" id="criticalCount">0</div>
+                        <div class="metric-label">Critical Violations</div>
+                    </div>
+                </div>
+                <div class="metric-card high">
+                    <div class="metric-icon">🔴</div>
+                    <div class="metric-content">
+                        <div class="metric-value" id="highCount">0</div>
+                        <div class="metric-label">High Priority</div>
+                    </div>
+                </div>
+                <div class="metric-card health">
+                    <div class="metric-icon">💚</div>
+                    <div class="metric-content">
+                        <div class="metric-value" id="healthScore">100</div>
+                        <div class="metric-label">Health Score</div>
+                    </div>
+                </div>
+                <div class="metric-card violations">
+                    <div class="metric-icon">📊</div>
+                    <div class="metric-content">
+                        <div class="metric-value" id="totalViolations">0</div>
+                        <div class="metric-label">Total Violations</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3D Heatmap Visualization -->
+        <section id="heatmapSection" class="heatmap-section hidden">
+            <div class="card">
+                <div class="section-header">
+                    <h2>3D Violation Heatmap</h2>
+                    <div class="heatmap-controls">
+                        <button id="rotateBtn" class="btn-icon" title="Toggle Rotation">
+                            🔄
+                        </button>
+                        <button id="resetViewBtn" class="btn-icon" title="Reset View">
+                            🎯
+                        </button>
+                    </div>
+                </div>
+                <div id="heatmapCanvas" class="heatmap-canvas"></div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="legend-color critical-color"></span>
+                        <span>Critical</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color high-color"></span>
+                        <span>High</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color medium-color"></span>
+                        <span>Medium</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color low-color"></span>
+                        <span>Low</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Violations List -->
+        <section id="violationsSection" class="violations-section hidden">
+            <div class="card">
+                <h2>Detected Violations</h2>
+                <div class="violations-filter">
+                    <button class="filter-btn active" data-severity="all">All</button>
+                    <button class="filter-btn" data-severity="critical">Critical</button>
+                    <button class="filter-btn" data-severity="high">High</button>
+                    <button class="filter-btn" data-severity="medium">Medium</button>
+                    <button class="filter-btn" data-severity="low">Low</button>
+                </div>
+                <div id="violationsList" class="violations-list"></div>
+            </div>
+        </section>
+
+        <!-- AI Governance Assistant -->
+        <section id="governanceSection" class="governance-section hidden">
+            <div class="card">
+                <h2>🤖 AI Governance Assistant</h2>
+                <div id="governanceContent"></div>
+            </div>
+        </section>
+
+        <!-- Architecture-as-Code Editor -->
+        <section id="architectureEditorSection" class="architecture-editor-section hidden">
+            <div class="card">
+                <div class="section-header">
+                    <h2>Architecture-as-Code Definition</h2>
+                    <div class="editor-actions">
+                        <button id="loadExampleBtn" class="btn-secondary">Load Example</button>
+                        <button id="validateBtn" class="btn-primary">Validate</button>
+                    </div>
+                </div>
+                <textarea id="architectureEditor" class="architecture-editor" placeholder="Enter your architecture definition in JSON..."></textarea>
+                <div id="validationResults" class="validation-results hidden"></div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Violation Detail Modal -->
+    <div id="violationModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Violation Details</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div id="modalBody" class="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>Analyzing repository architecture...</p>
+    </div>
+
+    <script src="arch-drift.js"></script>
+</body>
+</html>
