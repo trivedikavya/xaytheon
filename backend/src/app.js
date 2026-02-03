@@ -29,6 +29,7 @@ const bundleRoutes = require("./routes/bundle.routes");
 const testLabRoutes = require("./routes/test-lab.routes");
 const archaeologyRoutes = require("./routes/code-archaeology.routes");
 const refactorRoutes = require("./routes/refactor-safety.routes");
+const sprintRoutes = require("./routes/sprint.routes");
 
 const app = express();
 
@@ -160,6 +161,7 @@ app.use("/api/bundle", bundleRoutes);
 app.use("/api/test-lab", testLabRoutes);
 app.use("/api/time-travel", archaeologyRoutes);
 app.use("/api/refactor", refactorRoutes);
+app.use("/api/sprint", sprintRoutes);
 
 app.use((err, req, res, next) => {
   console.error("Error:", err);
