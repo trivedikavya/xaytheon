@@ -1,116 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>Contribution Heatmap — XAYTHEON</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="style.css" />
-     <link rel="stylesheet" href="style.css?v=3">
-    <link rel="stylesheet" href="heatmap.css" />
-    
 
-    <!-- Supabase SDK & Auth -->
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="heatmap.css">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/dist/umd/supabase.min.js"></script>
+
+    <!-- App Scripts -->
     <script defer src="auth.js"></script>
     <script defer src="i18n.js"></script>
 
     <!-- html2canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <!-- Page Scripts -->
+    <script defer src="theme.js"></script>
+    <script defer src="heatmap.js"></script>
+    <script defer src="boilerplate/boilerplate-loader.js"></script>
 </head>
 
 <body class="eightgon-page">
-    <div class="page-wrapper">
-        <div id="header-placeholder"></div>
+<div class="page-wrapper">
 
-            <div class="insight-content">
-                <div class="stat-row">
-                    <span class="stat-label">Current Streak</span>
-                    <span class="stat-value big" id="current-streak">0 days</span>
-                </div>
+    <!-- Header -->
+    <div id="header-placeholder"></div>
 
-                <div class="stat-row">
-                    <span class="stat-label">Longest Streak</span>
-                    <span class="stat-value" id="longest-streak">0 days</span>
-                </div>
+    <main class="heatmap-page">
 
-                <div class="stat-row">
-                    <span class="stat-label">Total Contributions</span>
-                    <span class="stat-value" id="total-attrib">0</span>
-                </div>
+        <!-- ===== HEATMAP CARD ===== -->
+        <article class="card heatmap-card" id="capture-area">
+
+            <header class="heatmap-header">
+                <h2>🔥 Contribution Heatmap</h2>
+                <button id="export-btn" class="btn btn-primary">
+                    Export PNG
+                </button>
+            </header>
+
+            <!-- Heatmap SVG container -->
+            <div id="heatmap-svg-container" class="heatmap-container">
+                <!-- SVG injected by heatmap.js -->
             </div>
+
+            <!-- Legend -->
+            <div class="heatmap-legend">
+                <span>Less</span>
+                <ul class="legend-colors">
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                </ul>
+                <span>More</span>
+            </div>
+
         </article>
 
-        <!-- Productivity -->
-        <article class="card insight-card">
-            <h3>⚡ Productivity</h3>
+        <!-- ===== INSIGHTS SECTION ===== -->
+        <section class="insights-section">
 
-            <div class="insight-content">
-                <div class="stat-row">
-                    <span class="stat-label">Best Day</span>
-                    <span class="stat-value big" id="best-day">-</span>
+            <!-- Streaks -->
+            <article class="card insight-card">
+                <h3>📈 Streaks</h3>
+
+                <div class="insight-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Current Streak</span>
+                        <span class="stat-value big" id="current-streak">0 days</span>
+                    </div>
+
+                    <div class="stat-row">
+                        <span class="stat-label">Longest Streak</span>
+                        <span class="stat-value" id="longest-streak">0 days</span>
+                    </div>
+
+                    <div class="stat-row">
+                        <span class="stat-label">Total Contributions</span>
+                        <span class="stat-value" id="total-attrib">0</span>
+                    </div>
                 </div>
+            </article>
 
-                <div class="stat-row">
-                    <span class="stat-label">Most Productive Hour</span>
-                    <span class="stat-value" id="best-hour">-</span>
+            <!-- Productivity -->
+            <article class="card insight-card">
+                <h3>⚡ Productivity</h3>
+
+                <div class="insight-content">
+                    <div class="stat-row">
+                        <span class="stat-label">Best Day</span>
+                        <span class="stat-value big" id="best-day">-</span>
+                    </div>
+
+                    <div class="stat-row">
+                        <span class="stat-label">Most Productive Hour</span>
+                        <span class="stat-value" id="best-hour">-</span>
+                    </div>
+
+                    <p class="insight-tip" id="insight-tip">
+                        Analyze your peak hours to optimize deep work sessions.
+                    </p>
                 </div>
+            </article>
 
-                <p class="insight-tip" id="insight-tip">
-                    Analyze your peak hours to optimize deep work sessions.
-                </p>
-            </div>
-        </article>
+            <!-- Theme Selector -->
+            <article class="card insight-card" id="theme-selector-card">
+                <h3>🎨 Theme</h3>
 
-        <!-- Theme Selector -->
-        <article class="card insight-card" id="theme-selector-card">
-            <h3>🎨 Theme</h3>
+                <div class="insight-content">
+                    <div class="theme-options" role="group" aria-label="Heatmap color themes">
+                        <button class="theme-btn active" data-theme="default"
+                            style="background:var(--accent-color)"
+                            aria-label="Default theme"></button>
 
-            <div class="insight-content">
-                <div class="theme-options" role="group" aria-label="Heatmap color themes">
-                    <button class="theme-btn active" data-theme="default"
-                        style="background:var(--accent-color)"
-                        aria-label="Default theme"></button>
+                        <button class="theme-btn" data-theme="fire"
+                            style="background:#f59e0b"
+                            aria-label="Fire theme"></button>
 
-                    <button class="theme-btn" data-theme="fire"
-                        style="background:#f59e0b"
-                        aria-label="Fire theme"></button>
+                        <button class="theme-btn" data-theme="ocean"
+                            style="background:#0ea5e9"
+                            aria-label="Ocean theme"></button>
 
-                    <button class="theme-btn" data-theme="ocean"
-                        style="background:#0ea5e9"
-                        aria-label="Ocean theme"></button>
+                        <button class="theme-btn" data-theme="forest"
+                            style="background:#22c55e"
+                            aria-label="Forest theme"></button>
 
-                    <button class="theme-btn" data-theme="forest"
-                        style="background:#22c55e"
-                        aria-label="Forest theme"></button>
+                        <button class="theme-btn" data-theme="pink"
+                            style="background:#ec4899"
+                            aria-label="Pink theme"></button>
+                    </div>
 
-                    <button class="theme-btn" data-theme="pink"
-                        style="background:#ec4899"
-                        aria-label="Pink theme"></button>
+                    <p class="theme-help">
+                        Select a color palette for your graph.
+                    </p>
                 </div>
+            </article>
 
-                <p class="theme-help">
-                    Select a color palette for your graph.
-                </p>
-            </div>
-        </article>
+        </section>
 
-    </section>
+    </main>
 
-</main>
+    <!-- Footer -->
+    <div id="footer-placeholder"></div>
 
-
-        <div id="footer-placeholder"></div>
-    </div>
-
-    <script src="theme.js"></script>
-    <script src="heatmap.js"></script>
-    <script src="boilerplate/boilerplate-loader.js"></script>
-    
+</div>
 </body>
-
 </html>
-
-
