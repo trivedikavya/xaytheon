@@ -4,6 +4,10 @@
 
   const REQUEST_TIMEOUT = 30000;
 
+  function isValidEmail(email) {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email);
+
   function enforceHttps() {
     if (window.location.protocol !== 'https:' &&
       window.location.hostname !== 'localhost' &&
@@ -169,6 +173,15 @@
     if (!email || typeof email !== 'string' || !password || typeof password !== 'string') {
       throw new Error('Email and password are required');
     }
+
+    if (!isValidEmail(email.trim())) {
+      throw new Error("Please enter a valid email address (e.g., user@gmail.com)");
+    }
+
+    if (!password || typeof password !== 'string') {
+      throw new Error("Password is required");
+    }
+
 
     if (email.length > 254 || password.length > 128) {
       throw new Error('Input data too long');
