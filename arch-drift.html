@@ -13,10 +13,14 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-content">
-            <h1 class="nav-title">🏗️ Architectural Drift Detector</h1>
+            <h1 class="nav-title">
+                <span aria-hidden="true">🏗️</span>
+                Architectural Drift Detector
+            </h1>
             <div class="nav-actions">
-                <button id="refreshBtn" class="btn-secondary">
-                    <span>🔄</span> Refresh
+                <button id="refreshBtn" class="btn-secondary" type="button">
+                    <span aria-hidden="true">🔄</span>
+                    Refresh
                 </button>
                 <a href="index.html" class="btn-secondary">← Dashboard</a>
             </div>
@@ -31,15 +35,15 @@
                 <h2>Repository Analysis</h2>
                 <div class="input-grid">
                     <div class="form-group">
-                        <label>Repository Owner</label>
+                        <label for="ownerInput">Repository Owner</label>
                         <input type="text" id="ownerInput" placeholder="e.g., facebook">
                     </div>
                     <div class="form-group">
-                        <label>Repository Name</label>
+                        <label for="repoInput">Repository Name</label>
                         <input type="text" id="repoInput" placeholder="e.g., react">
                     </div>
                     <div class="form-group">
-                        <label>Architecture Pattern</label>
+                        <label for="architectureSelect">Architecture Pattern</label>
                         <select id="architectureSelect">
                             <option value="layered">Layered Architecture</option>
                             <option value="mvc">MVC</option>
@@ -48,8 +52,9 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <button id="analyzeBtn" class="btn-primary">
-                            🔍 Analyze Architecture
+                        <button id="analyzeBtn" class="btn-primary" type="button">
+                            <span aria-hidden="true">🔍</span>
+                            Analyze Architecture
                         </button>
                     </div>
                 </div>
@@ -60,28 +65,39 @@
         <section id="metricsSection" class="metrics-section hidden">
             <div class="metrics-grid">
                 <div class="metric-card critical">
-                    <div class="metric-icon">⚠️</div>
+                    <div class="metric-icon" role="img" aria-label="Critical violations">
+                        ⚠️
+                    </div>
                     <div class="metric-content">
                         <div class="metric-value" id="criticalCount">0</div>
                         <div class="metric-label">Critical Violations</div>
                     </div>
                 </div>
+
                 <div class="metric-card high">
-                    <div class="metric-icon">🔴</div>
+                    <div class="metric-icon" role="img" aria-label="High priority issues">
+                        🔴
+                    </div>
                     <div class="metric-content">
                         <div class="metric-value" id="highCount">0</div>
                         <div class="metric-label">High Priority</div>
                     </div>
                 </div>
+
                 <div class="metric-card health">
-                    <div class="metric-icon">💚</div>
+                    <div class="metric-icon" role="img" aria-label="System health score">
+                        💚
+                    </div>
                     <div class="metric-content">
                         <div class="metric-value" id="healthScore">100</div>
                         <div class="metric-label">Health Score</div>
                     </div>
                 </div>
+
                 <div class="metric-card violations">
-                    <div class="metric-icon">📊</div>
+                    <div class="metric-icon" role="img" aria-label="Total violations">
+                        📊
+                    </div>
                     <div class="metric-content">
                         <div class="metric-value" id="totalViolations">0</div>
                         <div class="metric-label">Total Violations</div>
@@ -96,15 +112,17 @@
                 <div class="section-header">
                     <h2>3D Violation Heatmap</h2>
                     <div class="heatmap-controls">
-                        <button id="rotateBtn" class="btn-icon" title="Toggle Rotation">
-                            🔄
+                        <button id="rotateBtn" class="btn-icon" title="Toggle Rotation" type="button">
+                            <span aria-hidden="true">🔄</span>
                         </button>
-                        <button id="resetViewBtn" class="btn-icon" title="Reset View">
-                            🎯
+                        <button id="resetViewBtn" class="btn-icon" title="Reset View" type="button">
+                            <span aria-hidden="true">🎯</span>
                         </button>
                     </div>
                 </div>
+
                 <div id="heatmapCanvas" class="heatmap-canvas"></div>
+
                 <div class="legend">
                     <div class="legend-item">
                         <span class="legend-color critical-color"></span>
@@ -144,7 +162,10 @@
         <!-- AI Governance Assistant -->
         <section id="governanceSection" class="governance-section hidden">
             <div class="card">
-                <h2>🤖 AI Governance Assistant</h2>
+                <h2>
+                    <span aria-hidden="true">🤖</span>
+                    AI Governance Assistant
+                </h2>
                 <div id="governanceContent"></div>
             </div>
         </section>
@@ -155,8 +176,8 @@
                 <div class="section-header">
                     <h2>Architecture-as-Code Definition</h2>
                     <div class="editor-actions">
-                        <button id="loadExampleBtn" class="btn-secondary">Load Example</button>
-                        <button id="validateBtn" class="btn-primary">Validate</button>
+                        <button id="loadExampleBtn" class="btn-secondary" type="button">Load Example</button>
+                        <button id="validateBtn" class="btn-primary" type="button">Validate</button>
                     </div>
                 </div>
                 <textarea id="architectureEditor" class="architecture-editor" placeholder="Enter your architecture definition in JSON..."></textarea>
@@ -166,19 +187,19 @@
     </div>
 
     <!-- Violation Detail Modal -->
-    <div id="violationModal" class="modal hidden">
+    <div id="violationModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="violationModalTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Violation Details</h3>
-                <button class="modal-close">&times;</button>
+                <h3 id="violationModalTitle">Violation Details</h3>
+                <button class="modal-close" aria-label="Close modal">&times;</button>
             </div>
             <div id="modalBody" class="modal-body"></div>
         </div>
     </div>
 
     <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay hidden">
-        <div class="spinner"></div>
+    <div id="loadingOverlay" class="loading-overlay hidden" role="status" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
         <p>Analyzing repository architecture...</p>
     </div>
 
