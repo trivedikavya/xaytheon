@@ -46,3 +46,45 @@ exports.getPredictiveAnalysis = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+/**
+ * BLAST-RADIUS API ENDPOINT
+ * Calculates vulnerability propagation impact across dependency tree
+ */
+exports.getBlastRadius = async (req, res) => {
+    const { vulnerabilityNode } = req.query;
+
+    try {
+        if (!vulnerabilityNode) {
+            return res.status(400).json({
+                success: false,
+                message: 'vulnerabilityNode parameter is required'
+            });
+        }
+
+        // Get dependency tree (in production, fetch from real parser)
+        const dependencyTree = riskEngine.getMockDependencyTree();
+
+        // Calculate blast radius propagation
+        const blastRadiusData = await riskEngine.calculateBlastRadius(
+            vulnerabilityNode,
+            dependencyTree
+        );
+
+        res.json({
+            success: true,
+            data: {
+                ...blastRadiusData,
+                timestamp: new Date().toISOString(),
+                analysisType: 'AI-Driven Blast Radius Analysis'
+            }
+        });
+    } catch (error) {
+        console.error('Blast Radius Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
