@@ -9,16 +9,16 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="observability.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 </head>
 
 <body>
     <div class="observability-wrapper">
         <div id="header-placeholder"></div>
 
-        <canvas id="observability-canvas"></canvas>
+        <canvas id="observability-canvas" role="img" aria-label="3D visualization of system architecture and real-time traffic metrics"></canvas>
 
         <div class="hud-overlay">
             <header class="hud-header">
@@ -27,7 +27,7 @@
                     <p data-i18n="observability.subtitle">SYSTEM ARCHITECTURE & REAL-TIME TRAFFIC ANALYSIS</p>
                 </div>
 
-                <div class="hud-stats">
+                <div class="hud-stats" aria-live="polite">
                     <div class="stat-item">
                         <span class="stat-value" id="stat-latency">-- ms</span>
                         <span class="stat-label" data-i18n="observability.stats.latency">Avg Latency</span>
@@ -44,15 +44,15 @@
             </header>
 
             <div class="hud-bottom">
-                <div id="alerts-container" class="bottleneck-alerts">
+                <div id="alerts-container" class="bottleneck-alerts" aria-live="polite">
                     <!-- AI Alerts will be injected here -->
                 </div>
 
                 <div class="controls-hint">
-                    <i class="ri-mouse-line"></i> <span data-i18n="observability.controls.rotate">Rotate</span> | <i
-                        class="ri-drag-move-fill"></i> <span data-i18n="observability.controls.pan">Pan</span> | <i
-                        class="ri-zoom-in-line"></i> <span data-i18n="observability.controls.zoom">Zoom</span> | <i
-                        class="ri-cursor-line"></i> <span data-i18n="observability.controls.hover">Node Intel</span>
+                    <i class="ri-mouse-line" aria-hidden="true"></i> <span data-i18n="observability.controls.rotate">Rotate</span> | 
+                    <i class="ri-drag-move-fill" aria-hidden="true"></i> <span data-i18n="observability.controls.pan">Pan</span> | 
+                    <i class="ri-zoom-in-line" aria-hidden="true"></i> <span data-i18n="observability.controls.zoom">Zoom</span> | 
+                    <i class="ri-cursor-line" aria-hidden="true"></i> <span data-i18n="observability.controls.hover">Node Intel</span>
                 </div>
             </div>
         </div>
@@ -60,7 +60,7 @@
         <div id="node-tooltip"></div>
     </div>
 
-    <script src="observability.js"></script>
+    <script defer src="observability.js"></script>
     <script>
         // Load navbar
         fetch('navbar.html')
