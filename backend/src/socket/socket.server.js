@@ -16,6 +16,9 @@ function initializeSocket(server) {
         },
     });
 
+    // Initialize War-Room socket handler
+    // warRoomSocketHandler = new WarRoomSocket(io);
+
     // Authentication middleware for main namespace
     io.use((socket, next) => {
         const token = socket.handshake.auth.token;
@@ -176,6 +179,7 @@ function initializeSocket(server) {
             });
         });
 
+<<<<<<< HEAD
         // TRAFFIC OPS: Join traffic monitoring
         socket.on("join_traffic_ops", () => {
             socket.join("traffic_ops_room");
@@ -191,6 +195,8 @@ function initializeSocket(server) {
             });
         });
 
+=======
+>>>>>>> 436aa5c (feat(L3): implement AI-Driven Predictive Threat Detection & Integrated Security Fuzzer [SWoC26] Fixes #590)
         // Handle disconnect
         socket.on("disconnect", () => {
             console.log(`❌ User ${socket.userId} disconnected: ${socket.id}`);
