@@ -3,15 +3,16 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="description" content="Real-time incident war room with 3D observability, live collaboration, and AI-driven analysis.">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Incident War Room | XAYTHEON</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="war-room.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script defer src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 
 <body class="dark-theme">
@@ -19,7 +20,9 @@
 
     <main class="war-room-container">
         <!-- 3D Observability Canvas -->
-        <canvas id="war-room-canvas"></canvas>
+        <canvas id="war-room-canvas" role="img" aria-label="3D observability visualization of active incident">
+            Your browser does not support the canvas element.
+        </canvas>
 
         <!-- War Room HUD -->
         <div class="war-room-hud">
@@ -27,7 +30,7 @@
             <div class="top-bar glass">
                 <div class="incident-info">
                     <span class="incident-badge">
-                        <i class="ri-alarm-warning-fill"></i>
+                        <i class="ri-alarm-warning-fill" aria-hidden="true"></i>
                         <span id="incident-id">INCIDENT-2026-001</span>
                     </span>
                     <span class="incident-status" id="incident-status">ACTIVE</span>
@@ -49,19 +52,25 @@
                 </div>
 
                 <div class="participants-bar">
-                    <i class="ri-team-fill"></i>
+                    <i class="ri-team-fill" aria-hidden="true"></i>
                     <span id="participant-count">1</span> Active
                     <div class="participant-avatars" id="participant-avatars"></div>
                 </div>
 
-                <button id="emergency-btn" class="btn-emergency">🚨 EMERGENCY</button>
+                <button id="emergency-btn" class="btn-emergency">
+                    <span aria-hidden="true">🚨</span> EMERGENCY
+                </button>
             </div>
 
             <!-- Left Sidebar: Event Stream & Incident Pins -->
             <aside class="sidebar-left glass">
                 <div class="tabs">
-                    <button class="tab-btn active" data-tab="pins"><i class="ri-pushpin-fill"></i> Pins</button>
-                    <button class="tab-btn" data-tab="events"><i class="ri-broadcast-line"></i> Events</button>
+                    <button class="tab-btn active" data-tab="pins">
+                        <i class="ri-pushpin-fill" aria-hidden="true"></i> Pins
+                    </button>
+                    <button class="tab-btn" data-tab="events">
+                        <i class="ri-broadcast-line" aria-hidden="true"></i> Events
+                    </button>
                 </div>
 
                 <div id="pins-tab" class="tab-content active">
@@ -80,8 +89,12 @@
             <!-- Right Sidebar: Live Status & Analysis -->
             <aside class="sidebar-right glass">
                 <div class="tabs">
-                    <button class="tab-btn active" data-tab="status"><i class="ri-chat-3-line"></i> Status</button>
-                    <button class="tab-btn" data-tab="analysis"><i class="ri-robot-line"></i> Analysis</button>
+                    <button class="tab-btn active" data-tab="status">
+                        <i class="ri-chat-3-line" aria-hidden="true"></i> Status
+                    </button>
+                    <button class="tab-btn" data-tab="analysis">
+                        <i class="ri-robot-line" aria-hidden="true"></i> Analysis
+                    </button>
                 </div>
 
                 <div id="status-tab" class="tab-content active">
@@ -93,7 +106,9 @@
                     </div>
                     <div class="status-input">
                         <input type="text" id="status-input" placeholder="Broadcast status...">
-                        <button id="send-status-btn"><i class="ri-send-plane-fill"></i></button>
+                        <button id="send-status-btn">
+                            <i class="ri-send-plane-fill" aria-hidden="true"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -115,7 +130,9 @@
             <div id="incident-metadata" class="metadata-overlay glass hidden">
                 <div class="metadata-header">
                     <h3 id="metadata-title">Node: Payment Engine</h3>
-                    <button id="close-metadata-btn"><i class="ri-close-line"></i></button>
+                    <button id="close-metadata-btn">
+                        <i class="ri-close-line" aria-hidden="true"></i>
+                    </button>
                 </div>
                 <div class="metadata-body">
                     <div class="related-section">
@@ -132,17 +149,17 @@
             <!-- Controls (Bottom) -->
             <div class="controls-panel glass">
                 <button id="create-pin-btn" class="control-btn primary">
-                    <i class="ri-pushpin-2-fill"></i> Create Pin
+                    <i class="ri-pushpin-2-fill" aria-hidden="true"></i> Create Pin
                 </button>
                 <button id="toggle-camera-sync" class="control-btn">
-                    <i class="ri-camera-3-fill"></i> Sync Camera
+                    <i class="ri-camera-3-fill" aria-hidden="true"></i> Sync Camera
                 </button>
                 <button id="toggle-cursor-sync" class="control-btn active">
-                    <i class="ri-cursor-fill"></i> Show Cursors
+                    <i class="ri-cursor-fill" aria-hidden="true"></i> Show Cursors
                 </button>
                 <div class="separator"></div>
                 <button id="simulate-deploy-fail" class="control-btn outline">
-                    <i class="ri-error-warning-line"></i> Simulate Fail
+                    <i class="ri-error-warning-line" aria-hidden="true"></i> Simulate Fail
                 </button>
             </div>
 
@@ -157,14 +174,14 @@
     <!-- Emergency Overlay -->
     <div id="emergency-overlay" class="emergency-overlay hidden">
         <div class="emergency-content">
-            <h1>🚨 EMERGENCY MODE ACTIVATED</h1>
+            <h1><span aria-hidden="true">🚨</span> EMERGENCY MODE ACTIVATED</h1>
             <p>All critical incidents prioritized across the fleet</p>
             <button id="exit-emergency" class="btn-emergency-exit">Exit Emergency Mode</button>
         </div>
     </div>
 
-    <script src="boilerplate/boilerplate-loader.js"></script>
-    <script src="war-room.js"></script>
+    <script defer src="boilerplate/boilerplate-loader.js"></script>
+    <script defer src="war-room.js"></script>
 </body>
 
 </html>
