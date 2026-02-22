@@ -39,6 +39,15 @@
                 <h1><i class="ri-time-line" aria-hidden="true"></i> Forensic Time-Travel Analytics</h1>
                 <p class="subtitle">Scrub through 6 months of project health history</p>
             </div>
+            <div class="actions">
+                <button id="simulate-incident" class="btn btn-outline btn-sm">Simulate Incident</button>
+                <button id="export-snapshot" class="btn btn-primary btn-sm">Export State</button>
+            </div>
+        </header>
+
+        <!-- 3D Viewport -->
+        <div id="forensic-canvas-container">
+            <canvas id="forensic-3d-view"></canvas>
 
             <!-- Temporal Scrubber -->
             <div class="scrubber-panel glass">
@@ -46,7 +55,13 @@
                     <span id="current-date" aria-live="polite">Loading...</span>
                     <span id="health-score-display" class="health-badge" aria-live="polite">--</span>
                 </div>
+            </div>
+        </div>
 
+        <!-- The "Rewind" Control Bar -->
+        <footer class="forensic-controls glass">
+            <div class="playback-controls">
+                <button id="play-pause-btn" class="ctrl-btn">PAUSE</button>
                 <div class="timeline-container">
                     <label for="time-slider" class="visually-hidden">Timeline scrubber</label>
                     <input 

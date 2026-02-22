@@ -4,13 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Interactive Risk Galaxy dashboard visualizing repository fragility, bug propensity, and predictive code risk analytics in a 3D galaxy interface.">
     <title>Risk Galaxy — XAYTHEON</title>
+
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="risk-galaxy.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
 </head>
 
 <body class="dark-theme">
@@ -18,73 +21,88 @@
 
     <main class="risk-galaxy-container">
         <!-- 3D Star Map -->
-        <div id="galaxy-viewport"></div>
+        <div id="galaxy-viewport" role="region" aria-label="3D Risk Galaxy Visualization"></div>
 
         <!-- Dashboard Overlay -->
         <div class="risk-hud">
             <div class="left-panel">
                 <div class="card glass animate-in">
-                    <h3><i class="ri-radar-line"></i> Bug Propensity Engine</h3>
+                    <h3>
+                        <i class="ri-radar-line" aria-hidden="true"></i>
+                        Bug Propensity Engine
+                    </h3>
                     <p class="subtitle">Predicting code fragility using Churn & Expertise Debt</p>
 
                     <div class="risk-legend">
-                        <div class="legend-item"><span class="dot critical"></span> Critical Risk</div>
-                        <div class="legend-item"><span class="dot high"></span> High Propensity</div>
-                        <div class="legend-item"><span class="dot medium"></span> Medium Warning</div>
+                        <div class="legend-item">
+                            <span class="dot critical" aria-hidden="true"></span> Critical Risk
+                        </div>
+                        <div class="legend-item">
+                            <span class="dot high" aria-hidden="true"></span> High Propensity
+                        </div>
+                        <div class="legend-item">
+                            <span class="dot medium" aria-hidden="true"></span> Medium Warning
+                        </div>
                     </div>
                 </div>
 
                 <div class="card glass selection-panel hidden" id="file-card">
                     <div class="file-header">
-                        <h4 id="file-name">filename.js</h4>
-                        <span id="risk-badge" class="badge">HIGH</span>
+                        <h4 id="file-name" aria-live="polite">filename.js</h4>
+                        <span id="risk-badge" class="badge" aria-live="polite">HIGH</span>
                     </div>
-                    <p id="file-path">src/path/to/file.js</p>
+                    <p id="file-path" aria-live="polite">src/path/to/file.js</p>
 
                     <div class="metrics-grid">
                         <div class="metric">
                             <span class="label">Churn</span>
-                            <span class="value" id="val-churn">0%</span>
+                            <span class="value" id="val-churn" aria-live="polite">0%</span>
                         </div>
                         <div class="metric">
                             <span class="label">Exp. Debt</span>
-                            <span class="value" id="val-expertise">0%</span>
+                            <span class="value" id="val-expertise" aria-live="polite">0%</span>
                         </div>
                         <div class="metric">
                             <span class="label">Complexity</span>
-                            <span class="value" id="val-complexity">0</span>
+                            <span class="value" id="val-complexity" aria-live="polite">0</span>
                         </div>
                     </div>
 
                     <div class="prediction-box">
                         <h5>AI Prediction</h5>
-                        <p id="prediction-text">Selecting file...</p>
+                        <p id="prediction-text" aria-live="polite">Selecting file...</p>
                     </div>
 
                     <div class="chart-container">
-                        <canvas id="trendChart"></canvas>
+                        <canvas id="trendChart" role="img" aria-label="Risk trend over time chart"></canvas>
                     </div>
                 </div>
             </div>
 
             <div class="bottom-bar glass">
                 <div class="status-group">
-                    <span class="pulse"></span> System Live: Analyzing Repository DNA
+                    <span class="pulse" aria-hidden="true"></span>
+                    <span>System Live: Analyzing Repository DNA</span>
                 </div>
                 <div class="controls">
-                    <button class="btn btn-secondary btn-sm" onclick="resetView()">Reset View</button>
-                    <button class="btn btn-primary btn-sm" onclick="runScrub()">Run AI Scrub</button>
+                    <button class="btn btn-secondary btn-sm" onclick="resetView()">
+                        Reset View
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="runScrub()">
+                        Run AI Scrub
+                    </button>
                     <button class="btn btn-danger btn-sm" onclick="triggerBlastRadius('express')"
                         style="background: linear-gradient(135deg, #ff3e3e, #c72c2c); border: none;">
-                        <i class="ri-virus-line"></i> Simulate Blast Radius
+                        <i class="ri-virus-line" aria-hidden="true"></i>
+                        Simulate Blast Radius
                     </button>
                 </div>
             </div>
         </div>
     </main>
 
-    <script src="boilerplate/boilerplate-loader.js"></script>
-    <script src="risk-galaxy.js"></script>
+    <script src="boilerplate/boilerplate-loader.js" defer></script>
+    <script src="risk-galaxy.js" defer></script>
 </body>
 
 </html>
