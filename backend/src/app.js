@@ -127,6 +127,7 @@ app.use(cookieParser());
 ======================== */
 app.use(loadingMiddleware);
 app.use(requestLock);
+app.use(gatewayMiddleware);
 
 /* ========================
    ROUTES
