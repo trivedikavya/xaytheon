@@ -368,6 +368,110 @@ class EventStreamService extends EventEmitter {
     getEvent(eventId) {
         return this.eventBuffer.find(e => e.id === eventId);
     }
+
+    // ─── Issue #615: Digest Batching ──────────────────────────────────────
+
+    /**
+     * Per-user digest window storage.
+     * userId -> { events: [], windowStart, windowMs }
+     */
+    _digestWindows = new Map();
+
+    /**
+     * Push an event into a user's digest window.
+     * When the window expires (windowMs), flush is auto-triggered.
+     * @param {string} userId
+     * @param {Object} event         - enriched event object
+     * @param {number} windowMs      - batch window in ms (default 5 min)
+     * @param {Function} onFlush     - callback(digestBundle) when flushed
+     */
+    pushToDigestWindow(userId, event, windowMs = 300000, onFlush = null) {
+        if (!this._digestWindows.has(userId)) {
+            this._digestWindows.set(userId, {
+                events: [],
+                windowStart: Date.now(),
+                windowMs,
+                timer: null
+            });
+        }
+
+        const win = this._digestWindows.get(userId);
+        win.events.push(event);
+
+        // Clear existing timer and restart
+        if (win.timer) clearTimeout(win.timer);
+        win.timer = setTimeout(() => {
+            const bundle = this.flushDigestWindow(userId);
+            if (onFlush && bundle) onFlush(bundle);
+        }, windowMs);
+    }
+
+    /**
+     * Force-flush a user's digest window immediately.
+     * Returns the digest bundle and clears the window.
+     * @param {string} userId
+     * @returns {Object|null} digest bundle
+     */
+    flushDigestWindow(userId) {
+        const win = this._digestWindows.get(userId);
+        if (!win || win.events.length === 0) return null;
+
+        if (win.timer) { clearTimeout(win.timer); win.timer = null; }
+
+        const grouped = {};
+        win.events.forEach(e => {
+            const key = e.type || 'misc';
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(e);
+        });
+
+        const bundle = {
+            digestId: `digest_${userId}_${Date.now()}`,
+            userId,
+            windowStart: win.windowStart,
+            windowEnd: Date.now(),
+            totalEvents: win.events.length,
+            grouped,
+            topEvents: win.events
+                .sort((a, b) => (b.priority || 0) - (a.priority || 0))
+                .slice(0, 5)
+        };
+
+        this._digestWindows.delete(userId);
+        this.emit('digest:flushed', bundle);
+        return bundle;
+    }
+
+    /**
+     * Flush all pending digest windows immediately.
+     * @returns {Array} all bundles
+     */
+    flushAllDigests() {
+        const bundles = [];
+        for (const userId of this._digestWindows.keys()) {
+            const b = this.flushDigestWindow(userId);
+            if (b) bundles.push(b);
+        }
+        return bundles;
+    }
+
+    /**
+     * Get all pending digest windows (for admin view).
+     * @returns {Array<{userId, pendingCount, windowStart}>}
+     */
+    getPendingDigests() {
+        const result = [];
+        for (const [userId, win] of this._digestWindows.entries()) {
+            result.push({
+                userId,
+                pendingCount: win.events.length,
+                windowStart: win.windowStart,
+                windowMs: win.windowMs,
+                age: Date.now() - win.windowStart
+            });
+        }
+        return result;
+    }
 }
 
 module.exports = new EventStreamService();
