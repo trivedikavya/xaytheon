@@ -16,6 +16,9 @@ function initializeSocket(server) {
         },
     });
 
+    // Initialize War-Room socket handler
+    // warRoomSocketHandler = new WarRoomSocket(io);
+
     // Authentication middleware for main namespace
     io.use((socket, next) => {
         const token = socket.handshake.auth.token;
@@ -218,6 +221,21 @@ function initializeSocket(server) {
                 proposedBy: 'BURNOUT_ENGINE',
                 timestamp: Date.now()
             });
+        // DEPENDENCY RISK: Join CVE propagation monitoring room
+        socket.on("join_cve_propagation", () => {
+            socket.join("cve_propagation_room");
+            console.log(`🔍 User ${socket.userId} joined CVE Propagation Monitor`);
+        });
+
+        // DEPENDENCY RISK: Broadcast new CVE propagation alert to all subscribers
+        // Emitted server-side when a new vulnerable package scan completes.
+        socket.on("cve_propagation_alert", (alertPayload) => {
+            io.to("cve_propagation_room").emit("cve_propagation_alert", {
+                ...alertPayload,
+                detectedAt: Date.now(),
+                source: 'PROPAGATION_ENGINE_v1'
+            });
+            console.log(`🚨 CVE propagation alert broadcast: ${alertPayload.vulnerablePackage}`);
         });
 
         // Handle disconnect

@@ -65,10 +65,8 @@ class DependencyParserService {
 
     /**
      * Mock fetching dependency data for a repository.
-     * In a real app, this would fetch package.json from GitHub API.
      */
     async getMockDependencies(repoName) {
-        // Return some realistic dummy data for demonstration
         const mockPackageJson = {
             dependencies: {
                 "express": "^4.18.2",
@@ -87,6 +85,112 @@ class DependencyParserService {
         };
 
         return this.parseNpmDependencies(repoName, mockPackageJson);
+    }
+
+    // ─── Issue #618: Version-Range Overlap Detection ──────────────────────
+
+    /**
+     * Parse a semver range string (e.g. "^4.18.2") into { major, minor, patch, operator }.
+     * Handles: ^, ~, >=, <=, exact, *, x wildcards.
+     */
+    parseSemverRange(rangeStr) {
+        if (!rangeStr || rangeStr === '*' || rangeStr === 'latest') {
+            return { operator: 'any', major: null, minor: null, patch: null };
+        }
+
+        const op = rangeStr.match(/^(\^|~|>=|<=|>|<)/);
+        const operator = op ? op[1] : 'exact';
+        const version = rangeStr.replace(/^[\^~><= ]+/, '').trim();
+        const parts = version.split('.').map(p => p === 'x' ? null : parseInt(p, 10));
+
+        return {
+            operator,
+            major: parts[0] ?? null,
+            minor: parts[1] ?? null,
+            patch: parts[2] ?? null,
+            raw: rangeStr
+        };
+    }
+
+    /**
+     * Checks if two semver range strings overlap — i.e., could they
+     * both resolve to the same version and therefore share a vulnerable lib.
+     * @param {string} rangeA  e.g. "^4.18.0"
+     * @param {string} rangeB  e.g. "^4.17.0"
+     * @returns {boolean}
+     */
+    doRangesOverlap(rangeA, rangeB) {
+        const a = this.parseSemverRange(rangeA);
+        const b = this.parseSemverRange(rangeB);
+
+        // If either is 'any', they always overlap
+        if (a.operator === 'any' || b.operator === 'any') return true;
+
+        // Caret (^): compatible with major version
+        if (a.operator === '^' && b.operator === '^') {
+            return a.major === b.major;
+        }
+
+        // Tilde (~): compatible with minor version
+        if (a.operator === '~' && b.operator === '~') {
+            return a.major === b.major && a.minor === b.minor;
+        }
+
+        // Mix caret + tilde: overlap if majors match
+        if ((a.operator === '^' && b.operator === '~') ||
+            (a.operator === '~' && b.operator === '^')) {
+            return a.major === b.major;
+        }
+
+        // Exact vs anything: check if exact falls in the other's range
+        if (a.operator === 'exact') {
+            return this._exactInRange(a, b);
+        }
+        if (b.operator === 'exact') {
+            return this._exactInRange(b, a);
+        }
+
+        // Fallback: same major
+        return a.major === b.major;
+    }
+
+    /**
+     * Find all pairs of repos that share overlapping version ranges
+     * for a given package name. Used to find which repos could all
+     * be running the same vulnerable version.
+     * @param {string} pkgName
+     * @param {Array<{repoName, dependencies: Object}>} repoManifests
+     * @returns {Array<{repoA, repoB, rangeA, rangeB, overlap}>}
+     */
+    findSharedLibraryMatches(pkgName, repoManifests) {
+        const affected = repoManifests
+            .filter(r => r.dependencies && r.dependencies[pkgName])
+            .map(r => ({ repoName: r.repoName, range: r.dependencies[pkgName] }));
+
+        const overlaps = [];
+        for (let i = 0; i < affected.length; i++) {
+            for (let j = i + 1; j < affected.length; j++) {
+                const a = affected[i];
+                const b = affected[j];
+                const overlap = this.doRangesOverlap(a.range, b.range);
+                overlaps.push({
+                    repoA: a.repoName,
+                    repoB: b.repoName,
+                    rangeA: a.range,
+                    rangeB: b.range,
+                    overlap,
+                    sharedVulnerabilityRisk: overlap ? 'CONFIRMED' : 'UNLIKELY'
+                });
+            }
+        }
+
+        return overlaps.filter(o => o.overlap);
+    }
+
+    _exactInRange(exact, range) {
+        if (range.operator === '^') return exact.major === range.major;
+        if (range.operator === '~') return exact.major === range.major && exact.minor === range.minor;
+        return false;
     }
 }
 

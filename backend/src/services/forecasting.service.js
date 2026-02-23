@@ -19,7 +19,7 @@ class ForecastingService {
 
         // Group contributions by week
         const weeklyData = this.groupByWeek(contributions, weeks);
-        
+
         if (weeklyData.length < 2) {
             return { average: 0, trend: 'insufficient_data', confidence: 0 };
         }
@@ -108,7 +108,7 @@ class ForecastingService {
      */
     async forecastMilestone(milestone, currentProgress, velocity) {
         const remaining = milestone.totalTasks - currentProgress.completed;
-        
+
         if (remaining <= 0) {
             return {
                 status: 'completed',
@@ -230,7 +230,7 @@ class ForecastingService {
      */
     calculateBurndown(sprintData) {
         const { totalTasks, completedTasks, sprintDays, daysElapsed } = sprintData;
-        
+
         const idealBurndown = [];
         const actualBurndown = [];
 
@@ -299,7 +299,7 @@ class ForecastingService {
         if (authors.length > 0) {
             const maxContributions = Math.max(...Object.values(authorCounts));
             const totalContributions = contributions.length;
-            
+
             if (maxContributions / totalContributions > 0.6) {
                 bottlenecks.push({
                     type: 'contributor_concentration',
@@ -313,11 +313,11 @@ class ForecastingService {
         // Activity gaps
         const sortedContributions = contributions
             .sort((a, b) => new Date(a.created_at || a.timestamp) - new Date(b.created_at || b.timestamp));
-        
+
         let maxGap = 0;
         for (let i = 1; i < sortedContributions.length; i++) {
-            const gap = new Date(sortedContributions[i].created_at) - 
-                       new Date(sortedContributions[i-1].created_at);
+            const gap = new Date(sortedContributions[i].created_at) -
+                new Date(sortedContributions[i - 1].created_at);
             maxGap = Math.max(maxGap, gap / (1000 * 60 * 60 * 24)); // days
         }
 
@@ -341,14 +341,14 @@ class ForecastingService {
             return { comparison: 'no_data' };
         }
 
-        const historicalAvg = historicalSprints.reduce((sum, s) => 
+        const historicalAvg = historicalSprints.reduce((sum, s) =>
             sum + s.completedTasks, 0) / historicalSprints.length;
 
         const percentDiff = ((currentSprint.completedTasks - historicalAvg) / historicalAvg) * 100;
 
         return {
-            comparison: percentDiff > 10 ? 'above_average' : 
-                       percentDiff < -10 ? 'below_average' : 'average',
+            comparison: percentDiff > 10 ? 'above_average' :
+                percentDiff < -10 ? 'below_average' : 'average',
             percentDifference: Math.round(percentDiff),
             historicalAverage: Math.round(historicalAvg),
             current: currentSprint.completedTasks,
@@ -370,6 +370,54 @@ class ForecastingService {
             return 'Below average performance. Consider reviewing team capacity and blockers.';
         }
         return 'Performance is consistent with historical average.';
+    }
+    /**
+     * Calibrated Velocity Forecast (Issue #619)
+     * Wraps the existing velocity calculation but applies a calibration multiplier
+     * derived from the sprint retrospective accuracy tracking.
+     * @param {Array} contributions
+     * @param {number} calibrationMultiplier - from SprintOptimizerService.getCalibrationReport()
+     * @param {number} weeks
+     */
+    calculateCalibratedVelocity(contributions, calibrationMultiplier = 1.0, weeks = this.velocityWindow) {
+        const base = this.calculateVelocity(contributions, weeks);
+
+        if (base.average === 0) return { ...base, calibratedAverage: 0, calibrationMultiplier };
+
+        const calibratedAverage = parseFloat((base.average * calibrationMultiplier).toFixed(2));
+
+        // Recalculate ETA with calibrated velocity
+        const calibrationImpact = calibratedAverage - base.average;
+
+        return {
+            ...base,
+            calibratedAverage,
+            calibrationMultiplier,
+            calibrationImpactPerWeek: parseFloat(calibrationImpact.toFixed(2)),
+            confidenceAfterCalibration: parseFloat(
+                Math.min(1, base.confidence * (calibrationMultiplier > 0.9 ? 1.05 : 0.9)).toFixed(3)
+            )
+        };
+    }
+
+    /**
+     * Run a What-If for calibration adjustment:
+     * "What if we improve estimation accuracy by 10%?"
+     * @param {Array} contributions
+     * @param {Array<number>} multiplierScenarios  e.g. [0.8, 0.9, 1.0, 1.1]
+     */
+    calibrationScenarioAnalysis(contributions, multiplierScenarios = [0.8, 0.9, 1.0, 1.1]) {
+        return multiplierScenarios.map(mult => {
+            const cv = this.calculateCalibratedVelocity(contributions, mult);
+            return {
+                multiplier: mult,
+                label: mult < 1 ? `Team overestimates by ${Math.round((1 - mult) * 100)}%`
+                    : mult > 1 ? `Team underestimates by ${Math.round((mult - 1) * 100)}%`
+                        : 'Perfectly calibrated',
+                calibratedAverage: cv.calibratedAverage,
+                confidence: cv.confidenceAfterCalibration
+            };
+        });
     }
 }
 

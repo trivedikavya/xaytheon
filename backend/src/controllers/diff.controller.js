@@ -1,10 +1,15 @@
 /**
  * Diff Controller
  * Generates side-by-side diff JSON for comparing original vs refactored code
+ * Extended (Issue #618): adds propagation-map and blast-radius endpoints.
  */
 
 const diff = require('diff');
 const RefactorService = require('../services/refactor.service');
+const crossRepoMapper = require('../services/cross-repo-mapper.service');
+const cveScorer = require('../services/cve-scorer.service');
+const vulnPath = require('../services/vulnerability-path.service');
+const depParser = require('../services/dependency-parser.service');
 
 class DiffController {
     /**
@@ -185,7 +190,6 @@ function complexFunction(param1, param2, param3) {
      * Mock patch retrieval - in real implementation, fetch from storage
      */
     getMockPatch(patchId) {
-        // Mock patches for demonstration
         const patches = [
             {
                 id: '1',
@@ -200,12 +204,6 @@ function complexFunction(param1, param2, param3) {
 -    if (!userData.name || userData.name.length < 2) {
 -        throw new Error('Invalid name');
 -    }
--    if (!userData.email || !userData.email.includes('@')) {
--        throw new Error('Invalid email');
--    }
--    if (userData.age && (userData.age < 0 || userData.age > 150)) {
--        throw new Error('Invalid age');
--    }
 +    validateUserData(userData);
  
      // Process data
@@ -218,16 +216,9 @@ function complexFunction(param1, param2, param3) {
 +    if (!userData.name || userData.name.length < 2) {
 +        throw new Error('Invalid name');
 +    }
-+    if (!userData.email || !userData.email.includes('@')) {
-+        throw new Error('Invalid email');
-+    }
-+    if (userData.age && (userData.age < 0 || userData.age > 150)) {
-+        throw new Error('Invalid age');
-+    }
 +}`
             }
         ];
-
         return patches.find(p => p.id === patchId);
     }
 
@@ -249,7 +240,6 @@ function complexFunction(param1, param2, param3) {
                 return res.status(404).json({ error: 'Patch not found' });
             }
 
-            // Apply the refactoring patch via GitHub API
             const result = await GithubRefactorService.applyRefactoringPatch(
                 repoOwner,
                 repoName,
@@ -271,6 +261,107 @@ function complexFunction(param1, param2, param3) {
                 error: 'Failed to apply patch',
                 details: error.message
             });
+        }
+    }
+
+    // ─── Issue #618: Propagation Map & Blast-Radius ───────────────────────
+
+    /**
+     * POST /api/diff/propagation-map
+     * Accepts: { vulnerablePackage, cvssScore, repoManifests }
+     * Returns: full cross-repo propagation map with BFS impact chain.
+     */
+    async getPropagationMap(req, res) {
+        try {
+            const {
+                vulnerablePackage = 'lodash',
+                cvssScore = 7.5,
+                repoManifests
+            } = req.body;
+
+            // Use demo manifests if none provided
+            const manifests = repoManifests || [
+                { repoName: 'api-gateway', dependencies: ['lodash', 'axios', 'express'] },
+                { repoName: 'auth-service', dependencies: ['lodash', 'jsonwebtoken', 'bcrypt'] },
+                { repoName: 'analytics-service', dependencies: ['lodash', 'socket.io'] },
+                { repoName: 'notification-service', dependencies: ['axios', 'nodemailer'] },
+                { repoName: 'billing-service', dependencies: ['stripe', 'lodash'] }
+            ];
+
+            // Build full propagation map via BFS
+            const propagationMap = crossRepoMapper.buildFullPropagationMap(
+                vulnerablePackage, cvssScore, manifests
+            );
+
+            // Enrich with CVE propagation weights
+            const scoredChain = cveScorer.scorePropagationChain(
+                cvssScore,
+                propagationMap.affectedChain,
+                false
+            );
+
+            const heatmap = cveScorer.generatePropagationHeatmap(scoredChain);
+
+            // Find version overlaps for the vulnerable package
+            const manifestsWithDeps = manifests.map(m => ({
+                repoName: m.repoName,
+                dependencies: Object.fromEntries(m.dependencies.map(d => [d, '^1.0.0']))
+            }));
+            const sharedMatches = depParser.findSharedLibraryMatches(vulnerablePackage, manifestsWithDeps);
+
+            res.json({
+                success: true,
+                data: {
+                    propagationMap,
+                    scoredChain,
+                    heatmap,
+                    sharedVersionMatches: sharedMatches
+                }
+            });
+        } catch (error) {
+            console.error('Error building propagation map:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    /**
+     * POST /api/diff/blast-radius
+     * Accepts: { vulnerablePackage, vulnerabilityMeta }
+     * Returns: blast-radius ranked exploit chains and D3 graph data.
+     */
+    async getBlastRadius(req, res) {
+        try {
+            const {
+                vulnerablePackage = 'lodash',
+                vulnerabilityMeta = { severity: 'high', cve: 'CVE-2021-23337', type: 'prototype_pollution' }
+            } = req.body;
+
+            // Build a mock dependency graph and trace paths
+            const mockImportMap = {
+                'api-gateway/src/app.js': [vulnerablePackage],
+                'auth-service/src/index.js': [vulnerablePackage]
+            };
+
+            const mockPackageJson = { dependencies: { [vulnerablePackage]: '^4.17.20' } };
+            vulnPath.buildDependencyGraph(mockPackageJson, mockImportMap);
+
+            const exploitPaths = vulnPath.traceExploitPath(vulnerablePackage, vulnerabilityMeta);
+            const ranked = vulnPath.rankByBlastRadius(exploitPaths);
+            const chainExport = vulnPath.exportBlastRadiusChain(vulnerablePackage, ranked);
+            const graphData = vulnPath.toGraphData(chainExport);
+
+            res.json({
+                success: true,
+                data: {
+                    chainExport,
+                    graphData,
+                    topBlastTier: chainExport.summary.overallTier,
+                    criticalPathCount: chainExport.summary.criticalPaths
+                }
+            });
+        } catch (error) {
+            console.error('Error computing blast radius:', error);
+            res.status(500).json({ success: false, message: error.message });
         }
     }
 }

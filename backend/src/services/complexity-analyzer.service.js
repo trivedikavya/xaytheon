@@ -471,9 +471,8 @@ class ComplexityAnalyzerService {
       recommendations.push({
         priority: ap.severity,
         type: "anti-pattern",
-        title: `Fix ${ap.type.replace(/_/g, " ").toLowerCase()} (${
-          ap.count
-        } occurrences)`,
+        title: `Fix ${ap.type.replace(/_/g, " ").toLowerCase()} (${ap.count
+          } occurrences)`,
         description: ap.suggestion,
         impact: {
           carbonImpact: ap.carbonImpact,
@@ -580,6 +579,50 @@ class ComplexityAnalyzerService {
 
   clearCache() {
     this.cache.clear();
+  }
+
+  // ─── Issue #617: CQAS — Normalized Complexity Score ─────────────────
+
+  /**
+   * Produce a normalized complexity quality score (0-100, higher = better).
+   * Derived from avgEnergyScore, complexity distribution, and anti-pattern counts.
+   * Designed to be consumed by CodeAnalyzerService as one CQAS sub-dimension.
+   * @param {string} repoName - used for mock data path
+   * @returns {Object} { score, label, breakdown }
+   */
+  getNormalizedComplexityScore(repoName = 'demo-repo') {
+    // Simulate a repo analysis with mock file corpus
+    const mockFiles = [
+      { lines: 180, complexity: { score: 3 }, antiPatterns: [], heavyLibraries: [] },
+      { lines: 320, complexity: { score: 5 }, antiPatterns: [{ severity: 'high', count: 1 }], heavyLibraries: [{ size: 71 }] },
+      { lines: 90, complexity: { score: 2 }, antiPatterns: [], heavyLibraries: [] },
+      { lines: 250, complexity: { score: 4 }, antiPatterns: [{ severity: 'medium', count: 2 }], heavyLibraries: [] }
+    ];
+
+    const energyScores = mockFiles.map(f =>
+      this.calculateEnergyScore(f.complexity ? [{ score: f.complexity.score }] : [], f.antiPatterns, f.heavyLibraries)
+    );
+    const avgEnergy = energyScores.reduce((a, b) => a + b, 0) / energyScores.length;
+
+    // Convert: higher energy score = worse code; invert to quality score
+    const raw = Math.max(0, 100 - avgEnergy);
+
+    // Penalize quadratic+ complexity
+    const quadraticCount = mockFiles.filter(f => f.complexity && f.complexity.score >= 5).length;
+    const penalty = quadraticCount * 5;
+
+    const score = Math.max(0, Math.round(raw - penalty));
+
+    return {
+      dimension: 'complexity',
+      score,
+      label: score >= 80 ? 'GOOD' : score >= 60 ? 'FAIR' : score >= 40 ? 'POOR' : 'CRITICAL',
+      breakdown: {
+        avgEnergyScore: parseFloat(avgEnergy.toFixed(1)),
+        quadraticFileCount: quadraticCount,
+        penalty
+      }
+    };
   }
 }
 
