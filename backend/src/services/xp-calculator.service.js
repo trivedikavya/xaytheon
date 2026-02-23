@@ -205,11 +205,74 @@ const getUserGamificationSummary = async (userId) => {
     };
 };
 
+/**
+ * Sprint Velocity Estimation Accuracy Scoring (Issue #619)
+ * Scores how accurately a contributor estimated their sprint output.
+ * @param {number} estimated - story points committed
+ * @param {number} actual    - story points delivered
+ * @returns {Object} estimation score and pattern tag
+ */
+const scoreEstimationAccuracy = (estimated, actual) => {
+    if (!estimated || estimated === 0) return { score: 0, pattern: 'NO_DATA', xpPenalty: 0 };
+
+    const ratio = actual / estimated;
+    const errorPct = Math.abs(actual - estimated) / estimated * 100;
+
+    let pattern = 'ACCURATE';
+    let xpPenalty = 0;
+
+    if (ratio < 0.7) {
+        pattern = 'SEVERE_OVER_ESTIMATE';  // Committed way more than delivered
+        xpPenalty = 15;
+    } else if (ratio < 0.9) {
+        pattern = 'MILD_OVER_ESTIMATE';
+        xpPenalty = 5;
+    } else if (ratio > 1.3) {
+        pattern = 'SEVERE_UNDER_ESTIMATE'; // Delivered way more than committed
+        xpPenalty = 0;                     // This is fine — under-promising
+    } else if (ratio > 1.1) {
+        pattern = 'MILD_UNDER_ESTIMATE';
+        xpPenalty = 0;
+    }
+
+    // Score from 0-100 where 100 = perfect estimation
+    const score = Math.max(0, Math.round(100 - errorPct * 1.5));
+
+    return { score, pattern, xpPenalty, ratio: parseFloat(ratio.toFixed(3)) };
+};
+
+/**
+ * Compute a contributor's historical estimation pattern
+ * across multiple sprints.
+ * @param {Array<{estimated, actual}>} history
+ */
+const computeEstimationPatternHistory = (history) => {
+    if (!history || history.length === 0) return { trend: 'UNKNOWN', avgAccuracy: 0 };
+
+    const scored = history.map(h => scoreEstimationAccuracy(h.estimated, h.actual));
+    const avgScore = scored.reduce((a, b) => a + b.score, 0) / scored.length;
+    const overCount = scored.filter(s => s.pattern.includes('OVER')).length;
+    const underCount = scored.filter(s => s.pattern.includes('UNDER')).length;
+
+    let trend = 'STABLE';
+    if (overCount > history.length * 0.6) trend = 'CHRONICALLY_OVER_ESTIMATING';
+    else if (underCount > history.length * 0.6) trend = 'CHRONICALLY_UNDER_ESTIMATING';
+
+    return {
+        trend,
+        avgAccuracy: parseFloat(avgScore.toFixed(1)),
+        sprintsAnalyzed: history.length,
+        lastPattern: scored[scored.length - 1]?.pattern || 'UNKNOWN'
+    };
+};
+
 module.exports = {
     XP_CONFIG,
     calculateLevel,
     xpForNextLevel,
     checkAchievements,
     awardActivityXP,
-    getUserGamificationSummary
+    getUserGamificationSummary,
+    scoreEstimationAccuracy,
+    computeEstimationPatternHistory
 };
