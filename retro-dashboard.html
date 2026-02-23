@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAYTHEON | Sprint Retro & Velocity Calibration</title>
+    <meta name="description"
+        content="Adaptive sprint velocity calibration dashboard with retrospective analysis and per-contributor capacity normalization.">
+    <link rel="stylesheet" href="style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #060b14;
+            --surface: rgba(15, 23, 42, 0.8);
+            --border: rgba(99, 102, 241, 0.2);
+            --accent: #6366f1;
+            --green: #10b981;
+            --red: #ef4444;
+            --amber: #f59e0b;
+            --text: #e2e8f0;
+            --muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .page-wrap {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .page-header h1 {
+            font-size: 1.6rem;
+        }
+
+        .page-header h1 span {
+            color: var(--accent);
+        }
+
+        #error-rate-badge {
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .error-badge.low {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green);
+            border: 1px solid var(--green);
+        }
+
+        .error-badge.mid {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--amber);
+            border: 1px solid var(--amber);
+        }
+
+        .error-badge.high {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(6px);
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 1.25rem;
+            color: #a5b4fc;
+        }
+
+        .card h3 {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+
+        /* Fatigue */
+        .fatigue-bar-wrap {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            height: 12px;
+            overflow: hidden;
+            margin: 0.75rem 0;
+        }
+
+        #fatigue-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.8s ease;
+            border-radius: 6px;
+        }
+
+        #fatigue-label {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        /* Capacity Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.5rem;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+            font-weight: 500;
+        }
+
+        td {
+            padding: 0.6rem 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .eff {
+            color: var(--green);
+            font-weight: 700;
+        }
+
+        /* Calibration Badges */
+        #calibration-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .calib-badge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 10px;
+            min-width: 110px;
+            border: 1px solid var(--border);
+        }
+
+        .calib-badge.accurate {
+            border-color: var(--green);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .calib-badge.over_estimating {
+            border-color: var(--red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .calib-badge.under_estimating {
+            border-color: var(--amber);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .calib-badge .dev-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .calib-badge .mult {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #a5b4fc;
+        }
+
+        .calib-badge .status-tag {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        /* Forms */
+        .form-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            width: 120px;
+        }
+
+        .btn-submit {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.55rem 1.25rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        .btn-submit:hover {
+            background: #4f46e5;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        canvas {
+            max-height: 280px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav id="navbar-placeholder"></nav>
+
+    <div class="page-wrap">
+        <header class="page-header">
+            <div>
+                <h1>Sprint <span>Retro & Calibration</span></h1>
+                <p class="muted">Adaptive velocity calibration with retrospective accuracy tracking</p>
+            </div>
+            <span id="error-rate-badge" class="error-badge mid">Loading...</span>
+        </header>
+
+        <!-- Sprint History & Bias -->
+        <div class="grid-2">
+            <div class="card">
+                <h2>📊 Estimated vs. Actual Points</h2>
+                <canvas id="accuracy-chart"></canvas>
+            </div>
+            <div class="card">
+                <h2>🎯 Contributor Estimation Bias</h2>
+                <canvas id="bias-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Fatigue + Calibration Badges -->
+        <div class="grid-2">
+            <div class="card">
+                <h2>🔥 Team Fatigue Index</h2>
+                <div class="fatigue-bar-wrap">
+                    <div id="fatigue-fill"></div>
+                </div>
+                <p id="fatigue-label" class="muted">Loading...</p>
+            </div>
+            <div class="card">
+                <h2>⚙️ Calibration Multipliers</h2>
+                <div id="calibration-badges">
+                    <p class="muted">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Capacity Table -->
+        <div class="card" style="margin-bottom:1.5rem;">
+            <h2>👥 Normalized Team Capacity</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Contributor</th>
+                        <th>Raw Velocity</th>
+                        <th>Calibrated Velocity</th>
+                        <th>PTO</th>
+                        <th>Context-Switch Penalty</th>
+                        <th>Effective Capacity</th>
+                    </tr>
+                </thead>
+                <tbody id="capacity-tbody">
+                    <tr>
+                        <td colspan="6" class="muted">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Forms -->
+        <div class="grid-2">
+            <div class="card">
+                <h2>✏️ Record Sprint Outcome</h2>
+                <p class="muted" style="margin-bottom:1rem;">Submit actuals to update a contributor's calibration
+                    multiplier.</p>
+                <form id="calibrate-form" class="form-row">
+                    <div class="form-group">
+                        <label>Contributor ID</label>
+                        <input type="text" id="calib-dev-id" placeholder="alice" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Estimated Pts</label>
+                        <input type="number" id="calib-estimated" min="1" placeholder="20" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Actual Pts</label>
+                        <input type="number" id="calib-actual" min="0" placeholder="17" required>
+                    </div>
+                    <button type="submit" class="btn-submit">Calibrate</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>🏖️ Register PTO</h2>
+                <p class="muted" style="margin-bottom:1rem;">Reduce a contributor's sprint capacity based on planned
+                    time off.</p>
+                <form id="pto-form" class="form-row">
+                    <div class="form-group">
+                        <label>Contributor ID</label>
+                        <input type="text" id="pto-dev-id" placeholder="bob" required>
+                    </div>
+                    <div class="form-group">
+                        <label>PTO Days</label>
+                        <input type="number" id="pto-days" min="0" max="10" placeholder="2" required>
+                    </div>
+                    <button type="submit" class="btn-submit">Register</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="retro-dashboard.js"></script>
+    <script>
+        fetch('navbar.html').then(r => r.text()).then(html => {
+            document.getElementById('navbar-placeholder').innerHTML = html;
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAYTHEON | Code Quality Scorecard</title>
+    <meta name="description"
+        content="Multi-dimensional code quality aggregate score (CQAS) dashboard with radar chart, delta tracking, and CI gate integration.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #050b14;
+            --surface: rgba(8, 18, 40, 0.88);
+            --border: rgba(99, 102, 241, 0.2);
+            --accent: #6366f1;
+            --green: #22c55e;
+            --amber: #eab308;
+            --red: #ef4444;
+            --orange: #f97316;
+            --text: #e2e8f0;
+            --muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            background-image: radial-gradient(ellipse 70% 40% at 50% -10%, rgba(99, 102, 241, 0.07), transparent);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .page-wrap {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        /* ── Header ─────────────── */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            backdrop-filter: blur(12px);
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .page-header h1 span {
+            color: var(--accent);
+        }
+
+        #scan-status {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-top: 0.25rem;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .form-group label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            color: var(--text);
+            padding: 0.5rem 0.8rem;
+            border-radius: 7px;
+            font-size: 0.88rem;
+            width: 160px;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.55rem 1.2rem;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.88rem;
+            transition: 0.2s;
+            font-family: 'Space Grotesk', sans-serif;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid var(--border);
+        }
+
+        /* ── Layout ─────────────── */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .col-span-2 {
+            grid-column: span 2;
+        }
+
+        .full {
+            margin-bottom: 1.25rem;
+        }
+
+        /* ── Cards ──────────────── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.4rem;
+            backdrop-filter: blur(8px);
+        }
+
+        .card h2 {
+            font-size: 0.95rem;
+            color: #a5b4fc;
+            margin-bottom: 1rem;
+        }
+
+        /* ── Score Header ───────── */
+        #score-header {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .score-circle {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            border: 4px solid var(--score-color, #6366f1);
+            box-shadow: 0 0 20px var(--score-color, #6366f1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .score-value {
+            font-size: 2rem;
+            font-weight: 800;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .score-label {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .score-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .grade-badge {
+            display: inline-block;
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif;
+            border: 1px solid;
+            width: fit-content;
+        }
+
+        .score-status {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .delta-badge {
+            font-size: 0.82rem;
+        }
+
+        .delta-badge.positive {
+            color: var(--green);
+        }
+
+        .delta-badge.negative {
+            color: var(--red);
+        }
+
+        .delta-badge.neutral {
+            color: var(--muted);
+        }
+
+        /* ── Dimension Cards ─────── */
+        #dimension-cards {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.75rem;
+        }
+
+        .dim-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .dim-header {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+        }
+
+        .dim-name {
+            font-weight: 600;
+        }
+
+        .dim-weight {
+            margin-left: auto;
+            color: var(--muted);
+            font-size: 0.72rem;
+        }
+
+        .dim-score {
+            font-size: 1.6rem;
+            font-weight: 800;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .dim-bar-bg {
+            background: rgba(255, 255, 255, 0.06);
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        .dim-bar {
+            height: 4px;
+            border-radius: 2px;
+            transition: width 0.6s ease;
+        }
+
+        .dim-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .dim-label.good {
+            color: var(--green);
+        }
+
+        .dim-label.fair {
+            color: var(--amber);
+        }
+
+        .dim-label.poor {
+            color: var(--orange);
+        }
+
+        .dim-label.critical {
+            color: var(--red);
+        }
+
+        /* ── Weight Editor ───────── */
+        #weight-editor {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .weight-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .weight-row label {
+            width: 100px;
+            text-transform: capitalize;
+        }
+
+        .weight-row input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent);
+        }
+
+        .weight-row span {
+            width: 36px;
+            text-align: right;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        /* ── CI Gate ─────────────── */
+        .ci-form {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .gate-result {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+        }
+
+        .gate-result.passed {
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid var(--green);
+        }
+
+        .gate-result.failed {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid var(--red);
+        }
+
+        .gate-status {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .gate-score {
+            font-size: 0.88rem;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .fail-reasons {
+            list-style: none;
+        }
+
+        .fail-reasons li {
+            color: var(--red);
+            font-size: 0.82rem;
+            padding: 0.2rem 0;
+        }
+
+        .fail-reasons li::before {
+            content: '✗ ';
+        }
+
+        .ok-msg {
+            color: var(--green);
+            font-size: 0.85rem;
+        }
+
+        .gate-result.passed .gate-status {
+            color: var(--green);
+        }
+
+        .gate-result.failed .gate-status {
+            color: var(--red);
+        }
+
+        /* ── History Table ───────── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.5rem;
+            color: var(--muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        td {
+            padding: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .grade-chip {
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }
+
+        .dim-mini {
+            display: inline-block;
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--muted);
+            font-size: 0.72rem;
+            margin: 1px;
+        }
+
+        /* ── Trend Label ─────────── */
+        #trend-label {
+            font-size: 0.82rem;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+        }
+
+        #trend-label .improving {
+            color: var(--green);
+            font-weight: 600;
+        }
+
+        #trend-label .degrading {
+            color: var(--red);
+            font-weight: 600;
+        }
+
+        #trend-label .stable {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        canvas {
+            max-height: 300px;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+    </style>
+</head>
+
+<body>
+    <nav id="navbar-placeholder"></nav>
+    <div class="page-wrap">
+
+        <!-- Header -->
+        <header class="page-header">
+            <div>
+                <h1>Code Quality <span>Scorecard</span></h1>
+                <p id="scan-status">Initializing CQAS engine...</p>
+            </div>
+            <div class="header-controls">
+                <div class="form-group">
+                    <label>Repository</label>
+                    <input type="text" id="repo-input" value="SatyamPandey-07/xaytheon">
+                </div>
+                <div class="form-group">
+                    <label>Branch</label>
+                    <input type="text" id="branch-input" value="main">
+                </div>
+            </div>
+        </header>
+
+        <!-- Score + Radar -->
+        <div class="grid-2">
+            <div class="card">
+                <h2>🏆 Aggregate Score</h2>
+                <div id="score-header">
+                    <p class="muted">Loading...</p>
+                </div>
+            </div>
+            <div class="card">
+                <h2>🕸️ Quality Radar</h2>
+                <canvas id="radar-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Dimension Cards -->
+        <div class="card full">
+            <h2>📊 Dimension Breakdown</h2>
+            <div id="dimension-cards">
+                <p class="muted">Loading...</p>
+            </div>
+        </div>
+
+        <!-- Weight Editor + CI Gate -->
+        <div class="grid-2">
+            <div class="card">
+                <h2>⚖️ Score Weight Editor</h2>
+                <div id="weight-editor">
+                    <p class="muted">Loading...</p>
+                </div>
+                <button class="btn" id="btn-recompute" style="margin-top:1rem">⟳ Recompute with Custom Weights</button>
+            </div>
+            <div class="card">
+                <h2>🚦 CI Gate Integration</h2>
+                <div class="ci-form">
+                    <div class="form-group">
+                        <label>Min Score</label>
+                        <input type="number" id="gate-min-score" value="60" min="0" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Regression Δ</label>
+                        <input type="number" id="gate-max-delta" value="5" min="0" max="50">
+                    </div>
+                    <button class="btn" id="btn-ci-gate">Run Gate</button>
+                </div>
+                <div id="ci-gate-result">
+                    <p class="muted">Run the CI gate to see results.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trend Chart -->
+        <div class="card full">
+            <h2>📈 Historical Delta Trend</h2>
+            <div id="trend-label">Trend: loading...</div>
+            <canvas id="trend-chart"></canvas>
+        </div>
+
+        <!-- History Table -->
+        <div class="card full">
+            <h2>🕰️ CQAS History per Commit</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Commit</th>
+                        <th>Score</th>
+                        <th>Grade</th>
+                        <th>Dimensions</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="history-tbody">
+                    <tr>
+                        <td colspan="5" class="muted">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script src="frontend/js/quality-scorecard.js"></script>
+    <script>
+        fetch('navbar.html').then(r => r.text()).then(html => {
+            document.getElementById('navbar-placeholder').innerHTML = html;
+        });
+    </script>
+</body>
+
+</html>

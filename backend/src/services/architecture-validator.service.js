@@ -410,32 +410,58 @@ class ArchitectureValidatorService {
         version: "1.0",
         pattern: "mvc",
         layers: ["view", "controller", "model"],
-        allowedDependencies: [
-          { from: "view", to: "controller" },
-          { from: "controller", to: "model" },
-        ],
-        forbiddenDependencies: [
-          { from: "view", to: "model", severity: "critical", reason: "Views must not access models directly" },
-        ],
+        allowedDependencies: [{ from: "view", to: "controller" }, { from: "controller", to: "model" }],
+        forbiddenDependencies: [{ from: "view", to: "model", severity: "critical", reason: "Views must not access models directly" }]
       },
       clean: {
         name: "Clean Architecture",
         version: "1.0",
         pattern: "cleanArchitecture",
         layers: ["view", "controller", "service", "model"],
-        allowedDependencies: [
-          { from: "view", to: "controller" },
-          { from: "controller", to: "service" },
-          { from: "service", to: "model" },
-        ],
-        forbiddenDependencies: [
-          { from: "model", to: "*", severity: "critical", reason: "Domain must have no outward dependencies" },
-        ],
+        allowedDependencies: [{ from: "view", to: "controller" }, { from: "controller", to: "service" }, { from: "service", to: "model" }],
+        forbiddenDependencies: [{ from: "model", to: "*", severity: "critical", reason: "Domain must have no outward dependencies" }],
         customConstraints: [
           { type: "max-dependencies", layer: "controller", maxDependencies: 5, name: "Controller Dependency Limit" },
-          { type: "no-circular", layer: "*", name: "No Circular Dependencies" },
-        ],
-      },
+          { type: "no-circular", layer: "*", name: "No Circular Dependencies" }
+        ]
+      }
+    };
+  }
+
+  // ─── Issue #617: CQAS — Normalized Architecture Score ───────────────
+
+  /**
+   * Normalized architecture quality score (0-100, higher = better).
+   * Derived from violation counts; each critical violation = -15, high = -8, medium = -4.
+   * @param {Array} violations - array of violation objects with severity field
+   * @returns {Object} { score, label, breakdown }
+   */
+  getNormalizedArchitectureScore(violations = null) {
+    // Mock violations for demo if none provided
+    if (!violations) {
+      violations = [
+        { severity: 'critical', type: 'forbidden_dependency', from: 'view', to: 'model' },
+        { severity: 'high', type: 'layer_skip', from: 'view', to: 'service' }
+      ];
+    }
+
+    const critical = violations.filter(v => v.severity === 'critical').length;
+    const high = violations.filter(v => v.severity === 'high').length;
+    const medium = violations.filter(v => v.severity === 'medium').length;
+    const low = violations.filter(v => v.severity === 'low').length;
+
+    const penalty = Math.min(100, critical * 15 + high * 8 + medium * 4 + low * 1);
+    const score = Math.max(0, 100 - penalty);
+
+    return {
+      dimension: 'architecture',
+      score,
+      label: score >= 80 ? 'GOOD' : score >= 60 ? 'FAIR' : score >= 40 ? 'POOR' : 'CRITICAL',
+      breakdown: {
+        totalViolations: violations.length,
+        critical, high, medium, low,
+        penalty
+      }
     };
   }
 }

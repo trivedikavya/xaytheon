@@ -20,9 +20,9 @@ class CrossRepoLogicMapper {
      */
     async indexRepository(repoPath, repoName) {
         console.log(`Indexing repository: ${repoName}`);
-        
+
         const fingerprints = await astFingerprintService.analyzeDirectory(repoPath);
-        
+
         this.repoIndex.set(repoName, {
             path: repoPath,
             fingerprints,
@@ -36,7 +36,7 @@ class CrossRepoLogicMapper {
                 if (!this.globalBucketIndex.has(bucket.bucketId)) {
                     this.globalBucketIndex.set(bucket.bucketId, []);
                 }
-                
+
                 this.globalBucketIndex.get(bucket.bucketId).push({
                     repo: repoName,
                     fileIndex: idx,
@@ -103,8 +103,8 @@ class CrossRepoLogicMapper {
                                     repo2: item2.repo,
                                     file2: item2.filePath,
                                     similarity: parseFloat((similarity * 100).toFixed(2)),
-                                    type: similarity >= 0.95 ? 'exact-duplicate' : 
-                                          similarity >= 0.85 ? 'near-duplicate' : 'similar',
+                                    type: similarity >= 0.95 ? 'exact-duplicate' :
+                                        similarity >= 0.85 ? 'near-duplicate' : 'similar',
                                     features1: fp1.features,
                                     features2: fp2.features,
                                     functions1: fp1.functions.length,
@@ -120,7 +120,7 @@ class CrossRepoLogicMapper {
         // Sort by similarity
         matches.sort((a, b) => b.similarity - a.similarity);
         this.crossRepoMatches = matches;
-        
+
         return matches;
     }
 
@@ -137,7 +137,7 @@ class CrossRepoLogicMapper {
                 fp.functions.forEach(func => {
                     // Generate fingerprint for individual function
                     const funcFingerprint = this.generateFunctionFingerprint(func.code);
-                    
+
                     allFunctions.push({
                         repo: repoName,
                         file: fp.filePath,
@@ -196,7 +196,7 @@ class CrossRepoLogicMapper {
      */
     generateFunctionFingerprint(code) {
         const parseResult = astFingerprintService.parseCode(code);
-        
+
         if (parseResult.error) {
             return { signature: [], complexity: 0 };
         }
@@ -225,9 +225,8 @@ class CrossRepoLogicMapper {
             action: 'extract-to-shared-library',
             targetLibrary: 'common-utils',
             suggestedName: `${func1.name}_shared`,
-            reasoning: `Function appears in ${func1.repo} and ${func2.repo} with ${
-                func1.complexity > 5 ? 'high' : 'moderate'
-            } complexity. Consider extracting to shared utility library.`,
+            reasoning: `Function appears in ${func1.repo} and ${func2.repo} with ${func1.complexity > 5 ? 'high' : 'moderate'
+                } complexity. Consider extracting to shared utility library.`,
             estimatedSavings: {
                 linesOfCode: func1.code?.split('\n').length || 0,
                 maintenanceEffort: 'Medium'
@@ -250,11 +249,11 @@ class CrossRepoLogicMapper {
 
         this.crossRepoMatches.forEach(match => {
             const key = `complexity:${match.features1.complexity}|funcs:${match.functions1}`;
-            
+
             if (!patternGroups.has(key)) {
                 patternGroups.set(key, []);
             }
-            
+
             patternGroups.get(key).push(match);
         });
 
@@ -310,9 +309,9 @@ class CrossRepoLogicMapper {
         this.repoIndex.forEach((repoData, repoName) => {
             repoData.fingerprints.forEach((fp, idx) => {
                 const nodeId = `${repoName}:${fp.filePath}`;
-                
+
                 nodeMap.set(nodeId, nodes.length);
-                
+
                 nodes.push({
                     id: nodeId,
                     repo: repoName,
@@ -330,10 +329,10 @@ class CrossRepoLogicMapper {
         this.crossRepoMatches.forEach(match => {
             const sourceId = `${match.repo1}:${match.file1}`;
             const targetId = `${match.repo2}:${match.file2}`;
-            
+
             const sourceIdx = nodeMap.get(sourceId);
             const targetIdx = nodeMap.get(targetId);
-            
+
             if (sourceIdx !== undefined && targetIdx !== undefined) {
                 links.push({
                     source: sourceIdx,
@@ -354,7 +353,7 @@ class CrossRepoLogicMapper {
         const hash = repoName.split('').reduce((acc, char) => {
             return char.charCodeAt(0) + ((acc << 5) - acc);
         }, 0);
-        
+
         return Math.abs(hash) % 12; // 12 color groups
     }
 
@@ -365,7 +364,7 @@ class CrossRepoLogicMapper {
         const totalRepos = this.repoIndex.size;
         const totalFiles = Array.from(this.repoIndex.values())
             .reduce((sum, repo) => sum + repo.fileCount, 0);
-        
+
         const duplicatePairs = this.crossRepoMatches.filter(m => m.type === 'exact-duplicate').length;
         const nearDuplicates = this.crossRepoMatches.filter(m => m.type === 'near-duplicate').length;
         const similar = this.crossRepoMatches.filter(m => m.type === 'similar').length;
@@ -449,6 +448,110 @@ class CrossRepoLogicMapper {
         this.repoIndex.clear();
         this.globalBucketIndex.clear();
         this.crossRepoMatches = [];
+    }
+
+    // ─── Issue #618: Dependency Risk Propagation ────────────────────────────
+
+    /**
+     * Build a lightweight dependency adjacency list from multiple repos.
+     * Each repo declares a list of package dependencies.
+     * @param {Array<{repoName, dependencies: string[]}>} repoManifests
+     * @returns {Map<string, string[]>} node -> list of dependent repos
+     */
+    buildPropagationGraph(repoManifests) {
+        // packageName -> [repoNames that depend on it]
+        const graph = new Map();
+
+        repoManifests.forEach(({ repoName, dependencies }) => {
+            dependencies.forEach(pkg => {
+                if (!graph.has(pkg)) graph.set(pkg, []);
+                graph.get(pkg).push(repoName);
+            });
+        });
+
+        this._propagationGraph = graph;
+        return graph;
+    }
+
+    /**
+     * BFS traversal from a vulnerable package node.
+     * Finds all transitively affected repos up to maxDepth.
+     * Accumulates an impact score that decays with depth.
+     * @param {string} vulnerablePkg    - e.g. 'lodash'
+     * @param {number} cvssBase         - 0-10 base CVSS score
+     * @param {number} maxDepth         - BFS depth limit (default 4)
+     * @returns {Array<{repo, depth, impactScore}>}
+     */
+    traverseImpactBFS(vulnerablePkg, cvssBase = 7.0, maxDepth = 4) {
+        const graph = this._propagationGraph;
+        if (!graph) {
+            throw new Error('Call buildPropagationGraph() first.');
+        }
+
+        const visited = new Set();
+        const queue = [{ node: vulnerablePkg, depth: 0 }];
+        const affected = [];
+
+        while (queue.length > 0) {
+            const { node, depth } = queue.shift();
+
+            if (visited.has(node) || depth > maxDepth) continue;
+            visited.add(node);
+
+            const dependents = graph.get(node) || [];
+
+            dependents.forEach(repo => {
+                // Depth-decay: each hop reduces impact by 20%
+                const depthDecay = Math.pow(0.8, depth);
+                const impactScore = parseFloat((cvssBase * depthDecay).toFixed(2));
+
+                affected.push({
+                    repo,
+                    exposedVia: node,
+                    depth: depth + 1,
+                    impactScore,
+                    severity: impactScore >= 8 ? 'CRITICAL'
+                        : impactScore >= 6 ? 'HIGH'
+                            : impactScore >= 4 ? 'MEDIUM' : 'LOW'
+                });
+
+                // Continue BFS: treat repo itself as a node for indirect chains
+                if (!visited.has(repo)) {
+                    queue.push({ node: repo, depth: depth + 1 });
+                }
+            });
+        }
+
+        // Sort by impact score descending
+        return affected.sort((a, b) => b.impactScore - a.impactScore);
+    }
+
+    /**
+     * Build and return a full propagation map for a given CVE.
+     * @param {string} pkg      - vulnerable package name
+     * @param {number} cvss     - CVSS base score
+     * @param {Array}  manifests
+     */
+    buildFullPropagationMap(pkg, cvss, manifests) {
+        this.buildPropagationGraph(manifests);
+        const affectedChain = this.traverseImpactBFS(pkg, cvss);
+
+        const directlyAffected = affectedChain.filter(n => n.depth === 1);
+        const transitivelyAffected = affectedChain.filter(n => n.depth > 1);
+        const maxImpact = affectedChain.length > 0 ? affectedChain[0].impactScore : 0;
+
+        return {
+            vulnerablePackage: pkg,
+            cvssBase: cvss,
+            totalAffectedRepos: new Set(affectedChain.map(n => n.repo)).size,
+            directlyAffected,
+            transitivelyAffected,
+            maxImpact,
+            overallSeverity: maxImpact >= 8 ? 'CRITICAL'
+                : maxImpact >= 6 ? 'HIGH'
+                    : maxImpact >= 4 ? 'MEDIUM' : 'LOW',
+            affectedChain
+        };
     }
 }
 

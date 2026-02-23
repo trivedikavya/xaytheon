@@ -77,7 +77,7 @@ class ContributionAggregatorService {
        INSIGHTS
     ===================================================== */
     calculateInsights({ contributions = {} }) {
-        const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayTotals = new Array(7).fill(0);
         const hourTotals = new Array(24).fill(0);
 
@@ -121,6 +121,106 @@ class ContributionAggregatorService {
             dayDistribution: dayTotals,
             hourDistribution: hourTotals,
             intensityDistribution
+        };
+    }
+    /**
+     * Context-Switch Cost Model (Issue #619)
+     * Estimates productivity loss based on how many parallel tasks a contributor
+     * has been active on over the given window (days).
+     * @param {string} username
+     * @param {Object} contributions - date -> count map
+     * @param {number} windowDays
+     */
+    computeContextSwitchCost(username, contributions = {}, windowDays = 14) {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - windowDays);
+
+        const activeDays = Object.entries(contributions)
+            .filter(([date]) => new Date(date) >= cutoff)
+            .filter(([, count]) => count > 0);
+
+        const totalActiveDays = activeDays.length;
+
+        // Spike detection: days with unusually high commits (>8) suggest crunch/context-switching
+        const spikeDays = activeDays.filter(([, count]) => count > 8).length;
+        const spikeFraction = totalActiveDays > 0 ? spikeDays / totalActiveDays : 0;
+
+        // Cost score: 0 (no cost) to 1 (maximum penalty)
+        const contextSwitchCost = Math.min(1, spikeFraction * 1.5);
+
+        // Effective velocity multiplier: 1.0 = no penalty, 0.7 = severe penalty
+        const velocityMultiplier = parseFloat(Math.max(0.7, 1 - contextSwitchCost * 0.3).toFixed(3));
+
+        return {
+            username,
+            windowDays,
+            totalActiveDays,
+            spikeDays,
+            spikeFraction: parseFloat(spikeFraction.toFixed(3)),
+            contextSwitchCost: parseFloat(contextSwitchCost.toFixed(3)),
+            velocityMultiplier,
+            status: contextSwitchCost > 0.5 ? 'HIGH_SWITCHING' : contextSwitchCost > 0.2 ? 'MODERATE' : 'FOCUSED'
+        };
+    }
+
+    /**
+     * Focus-Depth Scoring (Issue #619)
+     * Measures how "deep" a contributor's work sessions are.
+     * Deep work = several consecutive days of moderate commits (3-8/day).
+     * Shallow work = many 1-2 commit days scattered throughout.
+     * @param {Object} contributions - date -> count map
+     * @returns {Object} focusScore (0-100), depth classification
+     */
+    computeFocusDepthScore(contributions = {}) {
+        const counts = Object.values(contributions);
+        if (counts.length === 0) return { focusScore: 0, depth: 'UNKNOWN' };
+
+        const deepSessions = counts.filter(c => c >= 3 && c <= 8).length;
+        const shallowSessions = counts.filter(c => c > 0 && c < 3).length;
+        const totalActive = counts.filter(c => c > 0).length;
+
+        const focusScore = totalActive > 0
+            ? Math.round((deepSessions / totalActive) * 100)
+            : 0;
+
+        let depth = 'SHALLOW';
+        if (focusScore >= 60) depth = 'DEEP';
+        else if (focusScore >= 35) depth = 'MODERATE';
+
+        return {
+            focusScore,
+            depth,
+            deepSessions,
+            shallowSessions,
+            totalActiveDays: totalActive
+        };
+    }
+
+    /**
+     * Rolling 14-day load metrics and spike detection (Issue #619)
+     * @param {Object} contributions - date -> count map
+     */
+    getRollingLoadMetrics(contributions = {}) {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 14);
+
+        const recentEntries = Object.entries(contributions)
+            .filter(([date]) => new Date(date) >= cutoff);
+
+        const counts = recentEntries.map(([, c]) => c);
+        const total = counts.reduce((a, b) => a + b, 0);
+        const avg = counts.length > 0 ? total / counts.length : 0;
+        const max = counts.length > 0 ? Math.max(...counts) : 0;
+
+        const spikeDays = counts.filter(c => c > avg * 2).length;
+
+        return {
+            windowDays: 14,
+            totalCommits: total,
+            avgDailyCommits: parseFloat(avg.toFixed(2)),
+            maxDailyCommits: max,
+            spikeDays,
+            loadLevel: avg > 8 ? 'OVERLOADED' : avg > 4 ? 'OPTIMAL' : 'UNDERLOADED'
         };
     }
 }
