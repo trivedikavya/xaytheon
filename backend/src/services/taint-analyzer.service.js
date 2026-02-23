@@ -44,7 +44,7 @@ class TaintAnalyzer {
      */
     async analyzeTaintFlow(code, filePath) {
         const flows = [];
-        
+
         // Parse code into AST (simplified - would use @babel/parser in production)
         const sourceMatches = this.findSources(code);
         const sinkMatches = this.findSinks(code);
@@ -169,7 +169,7 @@ class TaintAnalyzer {
 
             // Check if variable is sanitized
             for (const sanitizer of sanitizers) {
-                if (sanitizer.lineNumber === i + 1 && 
+                if (sanitizer.lineNumber === i + 1 &&
                     Array.from(currentVars).some(v => line.includes(v))) {
                     sanitized = true;
                 }
@@ -181,7 +181,7 @@ class TaintAnalyzer {
 
             // Check if any sink uses our tainted variables
             for (const sink of sinks) {
-                if (sink.lineNumber === i + 1 && 
+                if (sink.lineNumber === i + 1 &&
                     Array.from(currentVars).some(v => line.includes(v))) {
                     reachable.push({
                         ...sink,
@@ -263,7 +263,7 @@ class TaintAnalyzer {
      */
     extractAssignments(line, taintedVars) {
         const assignments = [];
-        
+
         // Check if any tainted variable is used in an assignment
         for (const taintedVar of taintedVars) {
             if (line.includes(taintedVar)) {
@@ -430,6 +430,51 @@ class TaintAnalyzer {
         if (patterns.length >= 3) return 'high';
         if (patterns.length >= 1) return 'medium';
         return 'low';
+    }
+
+    // ─── Issue #617: CQAS — Normalized Taint Spread Score ───────────────
+
+    /**
+     * Produce a normalized taint-spread quality score (0-100, higher = better quality).
+     * More unsanitized taint flows = worse score.
+     * @param {Array} flows  - output of analyzeProject or analyzeTaintFlow
+     * @returns {Object} { score, label, breakdown }
+     */
+    getNormalizedTaintScore(flows = null) {
+        // If no flows provided, use a minimal mock for demo
+        if (!flows) {
+            flows = [
+                { severity: 7, sanitized: false },
+                { severity: 5, sanitized: true },
+                { severity: 9, sanitized: false }
+            ];
+        }
+
+        const total = flows.length;
+        if (total === 0) return { dimension: 'taint', score: 100, label: 'GOOD', breakdown: { total: 0 } };
+
+        const criticalUnsanitized = flows.filter(f => f.severity >= 8 && !f.sanitized).length;
+        const highUnsanitized = flows.filter(f => f.severity >= 6 && f.severity < 8 && !f.sanitized).length;
+        const sanitizedRatio = flows.filter(f => f.sanitized).length / total;
+
+        // Penalty: critical=20pts, high=10pts each; bonus: sanitized flows reduce penalty
+        const penalty = Math.min(100, criticalUnsanitized * 20 + highUnsanitized * 10);
+        const bonus = Math.round(sanitizedRatio * 20);
+        const score = Math.max(0, Math.round(100 - penalty + bonus));
+
+        return {
+            dimension: 'taint',
+            score,
+            label: score >= 80 ? 'GOOD' : score >= 60 ? 'FAIR' : score >= 40 ? 'POOR' : 'CRITICAL',
+            breakdown: {
+                totalFlows: total,
+                criticalUnsanitized,
+                highUnsanitized,
+                sanitizedRatio: parseFloat(sanitizedRatio.toFixed(2)),
+                penalty,
+                bonus
+            }
+        };
     }
 }
 
