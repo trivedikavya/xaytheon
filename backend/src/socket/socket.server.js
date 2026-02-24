@@ -194,6 +194,29 @@ function initializeSocket(server) {
             });
         });
 
+        // GOVERNANCE: Join governance monitors
+        socket.on("join_governance", () => {
+            socket.join("governance_room");
+            console.log(`⚖️ User ${socket.userId} joined Governance Hub`);
+        });
+
+        // GOVERNANCE: Broadcast new proposal
+        socket.on("proposal_created", (proposal) => {
+            io.to("governance_room").emit("new_resolution", {
+                ...proposal,
+                serverTime: Date.now()
+            });
+        });
+
+        // GOVERNANCE: Vote update
+        socket.on("vote_cast", (data) => {
+            io.to("governance_room").emit("resolution_vote_update", {
+                proposalId: data.proposalId,
+                currentVotes: data.currentVotes,
+                totalNeeded: data.totalNeeded
+            });
+        });
+
         // DEPENDENCY RISK: Join CVE propagation monitoring room
         socket.on("join_cve_propagation", () => {
             socket.join("cve_propagation_room");
