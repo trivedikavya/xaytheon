@@ -194,6 +194,29 @@ function initializeSocket(server) {
             });
         });
 
+        // SERVICE MESH: Join mesh monitoring
+        socket.on("join_mesh_monitor", () => {
+            socket.join("mesh_monitor_room");
+            console.log(`🌐 User ${socket.userId} joined Service Mesh Monitor`);
+        });
+
+        // SERVICE MESH: Broadcast node health updates
+        socket.on("mesh_node_update", (nodeData) => {
+            io.to("mesh_monitor_room").emit("node_health_changed", {
+                ...nodeData,
+                updatedAt: Date.now()
+            });
+        });
+
+        // SERVICE MESH: Alert for cascading failures
+        socket.on("cascaded_failure_alert", (alert) => {
+            io.to("mesh_monitor_room").emit("mesh_critical_incident", {
+                ...alert,
+                incidentId: `MESH_${Date.now()}`,
+                timestamp: Date.now()
+            });
+        });
+
         // DEPENDENCY RISK: Join CVE propagation monitoring room
         socket.on("join_cve_propagation", () => {
             socket.join("cve_propagation_room");
