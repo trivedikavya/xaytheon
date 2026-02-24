@@ -6,16 +6,25 @@
 class CacheManager {
     constructor(options = {}) {
         this.storage = options.storage || localStorage; // or sessionStorage
-        this.defaultTTL = options.defaultTTL || 30 * 60 * 1000; // 30 minutes in milliseconds
+        this.defaultTTL = options.defaultTTL ?? 30 * 60 * 1000; // 30 minutes in milliseconds
         this.prefix = options.prefix || 'xaytheon_cache_';
-        this.enableLogging = options.enableLogging || false;
+        this.enableLogging = options.enableLogging ?? false;
+        this.version = options.version ?? '1';
+        this.autoPrune = options.autoPrune ?? true;
+        this.maxEvictionRetries = options.maxEvictionRetries ?? 10;
+
+        this._cleanupOldVersions();
     }
 
     /**
      * Generate cache key with prefix
      */
     _getKey(key) {
-        return `${this.prefix}${key}`;
+        return `${this.prefix}v${this.version}_${key}`;
+    }
+
+    _getVersionPrefix() {
+        return `${this.prefix}v${this.version}_`;
     }
 
     /**
@@ -27,6 +36,55 @@ class CacheManager {
         }
     }
 
+    _safeParse(key, value) {
+        try {
+            return JSON.parse(value);
+        } catch {
+            this.storage.removeItem(key);
+            return null;
+        }
+    }
+
+    _cleanupOldVersions() {
+        const currentPrefix = this._getVersionPrefix();
+        for (let i = this.storage.length - 1; i >= 0; i--) {
+            const key = this.storage.key(i);
+            if (key && key.startsWith(this.prefix) && !key.startsWith(currentPrefix)) {
+                this.storage.removeItem(key);
+            }
+        }
+    }
+
+    _evictOldest() {
+        let oldestKey = null;
+        let oldestAccess = Infinity;
+
+        for (let i = 0; i < this.storage.length; i++) {
+            const key = this.storage.key(i);
+            if (key && key.startsWith(this._getVersionPrefix())) {
+                const cached = this.storage.getItem(key);
+                if (!cached) continue;
+
+                const parsed = this._safeParse(key, cached);
+                if (!parsed) continue;
+
+                const accessTime = parsed.lastAccess ?? parsed.timestamp;
+                if (accessTime < oldestAccess) {
+                    oldestAccess = accessTime;
+                    oldestKey = key;
+                }
+            }
+        }
+
+        if (oldestKey) {
+            this.storage.removeItem(oldestKey);
+            this._log(`Evicted oldest cache entry`, oldestKey);
+            return true;
+        }
+
+        return false;
+    }
+
     /**
      * Set cache with expiry
      * @param {string} key - Cache key
@@ -34,28 +92,45 @@ class CacheManager {
      * @param {number} ttl - Time to live in milliseconds (optional)
      */
     set(key, data, ttl = null) {
-        try {
-            const cacheKey = this._getKey(key);
-            const expiryTime = Date.now() + (ttl || this.defaultTTL);
-            
-            const cacheData = {
-                data: data,
-                timestamp: Date.now(),
-                expiry: expiryTime
-            };
-
-            this.storage.setItem(cacheKey, JSON.stringify(cacheData));
-            this._log(`Cache SET: ${key}`, { expiryTime: new Date(expiryTime) });
-            return true;
-        } catch (error) {
-            console.error('[CacheManager] Error setting cache:', error);
-            // Handle quota exceeded error
-            if (error.name === 'QuotaExceededError') {
-                this._log('Storage quota exceeded, clearing old cache');
-                this.clearExpired();
-            }
-            return false;
+        if (this.autoPrune) {
+            this.clearExpired();
         }
+
+        const cacheKey = this._getKey(key);
+        const now = Date.now();
+        const expiryTime = now + (ttl ?? this.defaultTTL);
+
+        const cacheData = {
+            data: data,
+            timestamp: now,
+            lastAccess: now,
+            expiry: expiryTime
+        };
+
+        const serialized = JSON.stringify(cacheData);
+
+        let attempts = 0;
+        while (attempts <= this.maxEvictionRetries) {
+            try {
+                this.storage.setItem(cacheKey, serialized);
+                this._log(`Cache SET: ${key}`, { expiryTime: new Date(expiryTime) });
+                return true;
+            } catch (error) {
+                if (error.name !== 'QuotaExceededError') {
+                    console.error('[CacheManager] Error setting cache:', error);
+                    return false;
+                }
+
+                this._log('Quota exceeded, attempting eviction');
+                if (!this._evictOldest()) {
+                    return false;
+                }
+
+                attempts++;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -73,15 +148,20 @@ class CacheManager {
                 return null;
             }
 
-            const cacheData = JSON.parse(cached);
+            const cacheData = this._safeParse(cacheKey, cached);
+            if (!cacheData) return null;
+
             const now = Date.now();
 
             // Check if expired
             if (now > cacheData.expiry) {
                 this._log(`Cache EXPIRED: ${key}`);
-                this.remove(key);
+                this.storage.removeItem(cacheKey);
                 return null;
             }
+
+            cacheData.lastAccess = now;
+            this.storage.setItem(cacheKey, JSON.stringify(cacheData));
 
             this._log(`Cache HIT: ${key}`, { age: now - cacheData.timestamp });
             return cacheData.data;
@@ -108,17 +188,17 @@ class CacheManager {
             const now = Date.now();
             let clearedCount = 0;
 
-            for (let i = 0; i < this.storage.length; i++) {
+            for (let i = this.storage.length - 1; i >= 0; i--) {
                 const key = this.storage.key(i);
-                
-                if (key && key.startsWith(this.prefix)) {
+
+                if (key && key.startsWith(this._getVersionPrefix())) {
                     const cached = this.storage.getItem(key);
-                    if (cached) {
-                        const cacheData = JSON.parse(cached);
-                        if (now > cacheData.expiry) {
-                            this.storage.removeItem(key);
-                            clearedCount++;
-                        }
+                    if (!cached) continue;
+
+                    const cacheData = this._safeParse(key, cached);
+                    if (!cacheData || now > cacheData.expiry) {
+                        this.storage.removeItem(key);
+                        clearedCount++;
                     }
                 }
             }
@@ -139,7 +219,7 @@ class CacheManager {
             const keys = [];
             for (let i = 0; i < this.storage.length; i++) {
                 const key = this.storage.key(i);
-                if (key && key.startsWith(this.prefix)) {
+                if (key && key.startsWith(this._getVersionPrefix())) {
                     keys.push(key);
                 }
             }
@@ -165,16 +245,17 @@ class CacheManager {
 
             for (let i = 0; i < this.storage.length; i++) {
                 const key = this.storage.key(i);
-                
-                if (key && key.startsWith(this.prefix)) {
+
+                if (key && key.startsWith(this._getVersionPrefix())) {
                     totalEntries++;
                     const cached = this.storage.getItem(key);
-                    if (cached) {
-                        totalSize += cached.length;
-                        const cacheData = JSON.parse(cached);
-                        if (now > cacheData.expiry) {
-                            expiredEntries++;
-                        }
+                    if (!cached) continue;
+
+                    totalSize += new Blob([cached]).size;
+
+                    const cacheData = this._safeParse(key, cached);
+                    if (!cacheData || now > cacheData.expiry) {
+                        expiredEntries++;
                     }
                 }
             }
@@ -195,7 +276,14 @@ class CacheManager {
      * Check if cache exists and is valid
      */
     has(key) {
-        return this.get(key) !== null;
+        const cacheKey = this._getKey(key);
+        const cached = this.storage.getItem(cacheKey);
+        if (!cached) return false;
+
+        const cacheData = this._safeParse(cacheKey, cached);
+        if (!cacheData) return false;
+
+        return Date.now() <= cacheData.expiry;
     }
 
     /**
@@ -208,11 +296,12 @@ class CacheManager {
 
             if (!cached) return 0;
 
-            const cacheData = JSON.parse(cached);
-            const remaining = cacheData.expiry - Date.now();
+            const cacheData = this._safeParse(cacheKey, cached);
+            if (!cacheData) return 0;
 
+            const remaining = cacheData.expiry - Date.now();
             return remaining > 0 ? remaining : 0;
-        } catch (error) {
+        } catch {
             return 0;
         }
     }
@@ -222,7 +311,8 @@ class CacheManager {
 const defaultCache = new CacheManager({
     storage: localStorage,
     defaultTTL: 30 * 60 * 1000, // 30 minutes
-    enableLogging: true // Set to false in production
+    enableLogging: false, // Set to false in production
+    version: '1'
 });
 
 // Export for use in other modules
