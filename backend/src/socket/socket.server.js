@@ -194,6 +194,28 @@ function initializeSocket(server) {
             });
         });
 
+        // GRAPH: Join impact room
+        socket.on("join_impact_monitor", () => {
+            socket.join("impact_monitor_room");
+            console.log(`🌲 User ${socket.userId} joined Neural Dependency Graph`);
+        });
+
+        // GRAPH: Sync graph topology
+        socket.on("graph_topology_sync", (graphData) => {
+            io.to("impact_monitor_room").emit("graph_update", {
+                ...graphData,
+                syncedAt: Date.now()
+            });
+        });
+
+        // GRAPH: Broadcast impact analysis
+        socket.on("broadcast_impact", (analysis) => {
+            io.to("impact_monitor_room").emit("impact_calculated", {
+                ...analysis,
+                calculatedAt: Date.now()
+            });
+        });
+
         // DEPENDENCY RISK: Join CVE propagation monitoring room
         socket.on("join_cve_propagation", () => {
             socket.join("cve_propagation_room");
