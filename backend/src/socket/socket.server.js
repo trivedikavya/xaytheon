@@ -194,6 +194,28 @@ function initializeSocket(server) {
             });
         });
 
+        // SECURITY: Join security radar
+        socket.on("join_security_radar", () => {
+            socket.join("security_radar_room");
+            console.log(`🛡️ User ${socket.userId} joined Security Radar`);
+        });
+
+        // SECURITY: Vulnerability alert
+        socket.on("security_threat_detected", (finding) => {
+            io.to("security_radar_room").emit("vuln_alert", {
+                ...finding,
+                detectedAt: Date.now()
+            });
+        });
+
+        // SECURITY: Patch proposed
+        socket.on("security_patch_proposed", (patch) => {
+            io.to("security_radar_room").emit("patch_alert", {
+                ...patch,
+                proposedAt: Date.now()
+            });
+        });
+
         // DEPENDENCY RISK: Join CVE propagation monitoring room
         socket.on("join_cve_propagation", () => {
             socket.join("cve_propagation_room");
