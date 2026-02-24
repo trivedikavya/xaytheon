@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAYTHEON | Infrastructure Cost-Efficiency Hub</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #030712;
+            --surface: #0f172a;
+            --border: rgba(255, 255, 255, 0.06);
+            --accent: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 2.5rem;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+        }
+
+        h1 span {
+            color: var(--accent);
+        }
+
+        /* ── Summary Stats ──────────── */
+        #cost-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-card .label {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .value {
+            font-family: 'JetBrains Mono';
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #cbd5e1;
+        }
+
+        /* ── Node Grid ──────────────── */
+        #node-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+
+        .node-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            padding: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .type-badge {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono';
+            border: 1px solid var(--border);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .usage-row {
+            display: grid;
+            grid-template-columns: 40px 1fr 40px;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.7rem;
+        }
+
+        .bar-wrap {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: var(--accent);
+        }
+
+        .node-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .node-card.wasteful {
+            border-color: var(--error);
+        }
+
+        .node-card.wasteful .bar-fill {
+            background: var(--error);
+        }
+
+        /* ── Recs ───────────────────── */
+        .rec-item {
+            padding: 1rem;
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rec-desc p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .rec-action {
+            text-align: right;
+        }
+
+        .savings {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .btn:hover {
+            filter: brightness(1.1);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            padding: 1rem;
+            border-radius: 12px;
+            transform: translateX(150%);
+            transition: 0.4s;
+            z-index: 1000;
+        }
+
+        .toast.visible {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+
+<body>
+    <nav id="navbar-placeholder"></nav>
+
+    <div class="container">
+        <header>
+            <div>
+                <h1>Infrastructure <span>Cost-Efficiency</span></h1>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Predictive Resource Rebalancing & Waste
+                    Elimination</p>
+            </div>
+            <button class="btn" onclick="fetchData()">🔄 Sync Cloud Logs</button>
+        </header>
+
+        <div id="cost-summary"></div>
+
+        <div class="layout">
+            <div class="main-column">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📦 Resource Topology & Health</div>
+                    </div>
+                    <div id="node-grid"></div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">💡 Efficiency Recommendations</div>
+                    </div>
+                    <div id="rec-list"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">💹 Savings Target</div>
+                    </div>
+                    <p style="font-size: 0.85rem; line-height: 1.6; color: var(--text-muted);">
+                        Applying all recommended right-sizing configurations would reduce the current monthly burn by
+                        <strong style="color: var(--accent);">42.8%</strong> without sacrificing SLA availability.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="frontend/js/resource-optimizer.js"></script>
+    <script>
+        fetch('navbar.html').then(r => r.text()).then(html => {
+            document.getElementById('navbar-placeholder').innerHTML = html;
+        });
+    </script>
+</body>
+
+</html>

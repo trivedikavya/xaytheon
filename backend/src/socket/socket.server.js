@@ -194,6 +194,28 @@ function initializeSocket(server) {
             });
         });
 
+        // RESOURCE: Join efficiency house
+        socket.on("join_efficiency_ops", () => {
+            socket.join("efficiency_ops_room");
+            console.log(`💰 User ${socket.userId} joined Cost Efficiency Ops`);
+        });
+
+        // RESOURCE: Broadcast cost alert
+        socket.on("cost_threshold_exceeded", (data) => {
+            io.to("efficiency_ops_room").emit("cost_alert", {
+                ...data,
+                alertId: `COST_${Date.now()}`
+            });
+        });
+
+        // RESOURCE: Scaling suggestion
+        socket.on("scaling_suggestion_broadcast", (suggestion) => {
+            io.to("efficiency_ops_room").emit("scaling_event", {
+                ...suggestion,
+                suggestedAt: Date.now()
+            });
+        });
+
         // DEPENDENCY RISK: Join CVE propagation monitoring room
         socket.on("join_cve_propagation", () => {
             socket.join("cve_propagation_room");
