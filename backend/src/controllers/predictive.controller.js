@@ -1,10 +1,15 @@
 /**
  * Predictive Analytics Controller
  * Handles forecasting, velocity tracking, and burnout detection
+ * Extended (Issue #616): /burnout-risk and /rebalance endpoints.
  */
 
 const forecastingService = require('../services/forecasting.service');
 const sentimentEngine = require('../services/sentiment-trend.engine');
+const sentimentAnalyzer = require('../services/sentiment-analyzer.service');
+const xpCalculator = require('../services/xp-calculator.service');
+const contribAggregator = require('../services/contribution-aggregator.service');
+const sprintOptimizer = require('../services/sprint-optimizer.service');
 
 class PredictiveController {
     /**
@@ -288,7 +293,7 @@ class PredictiveController {
                 bottlenecks: {
                     count: Object.keys(bottlenecks).length,
                     critical: bottlenecks.slowReviews?.severity === 'high' ||
-                             bottlenecks.concentrationRisk?.severity === 'high',
+                        bottlenecks.concentrationRisk?.severity === 'high',
                     details: bottlenecks
                 },
                 timestamp: new Date().toISOString()
@@ -336,6 +341,139 @@ class PredictiveController {
                 error: 'Failed to compare historical performance',
                 message: error.message
             });
+        }
+    }
+
+    // ─── Issue #616: Burnout Detection ───────────────────────────────────────
+
+    /**
+     * POST /api/predictive/burnout-risk
+     * Accepts: { team: [{id, name, velocity, weeklyXP?, weeklyPoints?}] }
+     * Returns: per-developer burnout risk scores drawn from all 4 services.
+     */
+    async getBurnoutRisk(req, res) {
+        try {
+            const { team } = req.body;
+
+            // Build demo team if none provided
+            const devTeam = team || [
+                { id: 'alice', name: 'Alice', velocity: 5, weeklyXP: [80, 85, 79, 60, 50, 40, 38], weeklyPoints: [18, 20, 22, 24, 25, 26, 28] },
+                { id: 'bob', name: 'Bob', velocity: 6, weeklyXP: [90, 88, 91, 89, 85, 87, 86], weeklyPoints: [16, 14, 15, 16, 14, 15, 13] },
+                { id: 'charlie', name: 'Charlie', velocity: 4, weeklyXP: [60, 55, 48, 40, 32, 28, 25], weeklyPoints: [14, 16, 18, 20, 22, 24, 26] },
+                { id: 'dave', name: 'Dave', velocity: 7, weeklyXP: [100, 102, 99, 101, 98, 100, 99], weeklyPoints: [20, 19, 21, 20, 22, 20, 21] },
+                { id: 'eve', name: 'Eve', velocity: 5, weeklyXP: [70, 68, 71, 65, 60, 55, 50], weeklyPoints: [15, 16, 17, 18, 20, 22, 24] }
+            ];
+
+            const riskProfiles = devTeam.map(dev => {
+                // 1. Velocity decay from XP trends
+                const decayResult = xpCalculator.detectVelocityDecay(dev.weeklyXP || [80, 75, 70, 65]);
+
+                // 2. Overload signal from story points
+                const overloadResult = xpCalculator.detectOverloadSignal(dev.weeklyPoints || [15, 16, 18, 20], dev.velocity * 10 / 5);
+
+                // 3. Mood/sentiment flag
+                const moodResult = sentimentAnalyzer.buildMoodTimeline(dev.id);
+
+                // 4. Contribution spike detection (mock contribution data)
+                const mockContribs = Object.fromEntries(
+                    Array.from({ length: 28 }, (_, i) => {
+                        const d = new Date(); d.setDate(d.getDate() - i);
+                        const key = d.toISOString().split('T')[0];
+                        return [key, Math.floor(Math.random() * (i < 7 ? 15 : 8))];
+                    })
+                );
+                const loadMetrics = contribAggregator.computeRollingLoadMetrics(mockContribs);
+
+                // Composite burnout risk score (0-100; higher = more at risk)
+                let riskScore = 0;
+                riskScore += Math.min(40, Math.max(0, decayResult.decayRate * 0.8));  // up to 40
+                riskScore += overloadResult.capacityRatio > 1 ? Math.min(30, (overloadResult.capacityRatio - 1) * 60) : 0; // up to 30
+                if (moodResult.burnoutFlag) riskScore += 20;
+                if (loadMetrics.spikeDetected) riskScore += 10;
+                riskScore = Math.round(Math.min(100, riskScore));
+
+                return {
+                    username: dev.id,
+                    name: dev.name,
+                    riskScore,
+                    riskLevel: riskScore >= 70 ? 'CRITICAL' : riskScore >= 50 ? 'HIGH' : riskScore >= 30 ? 'MODERATE' : 'LOW',
+                    atRisk: riskScore >= 50,
+                    signals: {
+                        velocityDecay: decayResult,
+                        overload: overloadResult,
+                        moodFlag: { burnoutFlag: moodResult.burnoutFlag, moodTrend: moodResult.moodTrend },
+                        spikeDetected: loadMetrics.spikeDetected
+                    }
+                };
+            }).sort((a, b) => b.riskScore - a.riskScore);
+
+            const atRiskCount = riskProfiles.filter(d => d.atRisk).length;
+
+            res.json({
+                success: true,
+                data: {
+                    riskProfiles,
+                    summary: {
+                        totalDevs: riskProfiles.length,
+                        atRiskCount,
+                        criticalCount: riskProfiles.filter(d => d.riskLevel === 'CRITICAL').length,
+                        avgRiskScore: parseFloat((riskProfiles.reduce((s, d) => s + d.riskScore, 0) / riskProfiles.length).toFixed(1))
+                    },
+                    generatedAt: new Date().toISOString()
+                }
+            });
+        } catch (error) {
+            console.error('Burnout risk error:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    /**
+     * POST /api/predictive/rebalance
+     * Accepts: { team, assignments, burnoutSignals }
+     * Returns: recommended ticket reassignments and updated sprint plan.
+     */
+    async rebalanceWorkload(req, res) {
+        try {
+            const {
+                team = [
+                    { id: 'alice', name: 'Alice', velocity: 5, currentLoad: 45 },
+                    { id: 'bob', name: 'Bob', velocity: 6, currentLoad: 30 },
+                    { id: 'charlie', name: 'Charlie', velocity: 4, currentLoad: 50 },
+                    { id: 'dave', name: 'Dave', velocity: 7, currentLoad: 20 },
+                    { id: 'eve', name: 'Eve', velocity: 5, currentLoad: 38 }
+                ],
+                assignments = [
+                    { taskId: 'T-1', taskName: 'Refactor auth module', assignedTo: 'alice', points: 13 },
+                    { taskId: 'T-2', taskName: 'Fix API rate limiting', assignedTo: 'alice', points: 8 },
+                    { taskId: 'T-3', taskName: 'Add unit tests for cart', assignedTo: 'charlie', points: 8 },
+                    { taskId: 'T-4', taskName: 'Migrate DB schema', assignedTo: 'charlie', points: 13 },
+                    { taskId: 'T-5', taskName: 'Update dashboard UI', assignedTo: 'bob', points: 5 }
+                ],
+                burnoutSignals
+            } = req.body;
+
+            // If no external signals, run a quick burnout risk scan first
+            const signals = burnoutSignals || team.map(d => ({
+                username: d.id,
+                riskScore: d.currentLoad > (d.velocity * 8) ? 65 : 20,
+                moodTrend: 'stable',
+                velocitySignal: 'STABLE'
+            }));
+
+            const atRiskList = sprintOptimizer.identifyAtRiskContributors(team, signals);
+            const rebalanceResult = sprintOptimizer.rebalanceWorkload(assignments, atRiskList, team);
+
+            res.json({
+                success: true,
+                data: {
+                    atRiskContributors: atRiskList.filter(d => d.atRisk),
+                    ...rebalanceResult
+                }
+            });
+        } catch (error) {
+            console.error('Rebalance error:', error);
+            res.status(500).json({ success: false, message: error.message });
         }
     }
 }
