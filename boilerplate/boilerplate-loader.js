@@ -34,18 +34,22 @@
     }
 
   
-    function initBoilerplate() {
-        // Load header and re-initialize theme toggles after it loads
-        loadComponent('boilerplate/header.html', 'header-placeholder', function() {
-            // Re-setup theme toggles after header is loaded
-            if (typeof window.setupThemeToggles === 'function') {
-                window.setupThemeToggles();
-            }
-        });
+    // ... existing loadComponent function ...
 
-        // Load footer
-        loadComponent('boilerplate/footer.html', 'footer-placeholder');
-    }
+function initBoilerplate() {
+    loadComponent('boilerplate/header.html', 'header-placeholder', function() {
+        // NEW: Initialize the navbar logic once the header exists in the DOM
+        if (typeof initNavbar === 'function') {
+            initNavbar();
+        }
+        
+        if (typeof window.setupThemeToggles === 'function') {
+            window.setupThemeToggles();
+        }
+    });
+
+    loadComponent('boilerplate/footer.html', 'footer-placeholder');
+}
 
     // Run when DOM is ready
     if (document.readyState === 'loading') {

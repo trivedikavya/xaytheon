@@ -13,7 +13,31 @@
     <script defer src="auth.js"></script>
        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
+<style>
+    /* UPDATED: Better contrast for bot messages */
+.bot-msg .msg-content {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Adds depth */
+}
 
+/* UPDATED: Modern sidebar cards */
+.summary-card, .suggestions-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    transition: transform 0.3s ease;
+}
+
+.summary-card:hover {
+    transform: translateY(-5px); /* Interactive engagement */
+}
+
+.summary-text {
+    color: var(--text-primary); /* Fixes visibility issue */
+    font-weight: 400;
+}
+</style>
 <body class="eightgon-page">
     <div class="page-wrapper">
         <div id="header-placeholder"></div>
@@ -83,7 +107,41 @@
 
     <script src="ai.js"></script>
     <script src="boilerplate/boilerplate-loader.js"></script>
-    
+    <script>
+        // Inside DOMContentLoaded in ai.js
+const quickButtons = document.querySelectorAll('.suggest-btn');
+
+quickButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const question = btn.textContent.trim();
+        userInput.value = question;
+        handleSend(); // Trigger response immediately
+        
+        // Visual feedback for click
+        btn.style.borderColor = 'var(--accent-color)';
+        setTimeout(() => btn.style.borderColor = '', 300);
+    });
+});
+
+// UPDATED: Dynamic repository name instead of hardcoded string
+async function handleSummarize() {
+    const currentRepo = new URLSearchParams(window.location.search).get('repo') || 'trivedikavya/xaytheon';
+    summarizeBtn.disabled = true;
+    summarizeBtn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Analyzing...';
+
+    try {
+        const res = await fetch(`/api/ai/summarize?repo=${currentRepo}`);
+        const data = await res.json();
+        repoSummaryEl.innerHTML = `<strong>Summary:</strong> <br>${data.summary}`;
+    } catch (err) {
+        repoSummaryEl.innerText = "Error fetching repository insights.";
+    } finally {
+        summarizeBtn.disabled = false;
+        summarizeBtn.innerHTML = '<i class="ri-magic-line"></i> Explain Repo';
+    }
+}
+    </script>
 </body>
 
 </html>
