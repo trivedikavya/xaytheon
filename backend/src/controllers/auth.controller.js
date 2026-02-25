@@ -58,10 +58,6 @@ exports.githubCallback = async (req, res) => {
     // 1. Exchange code for access token
     const tokenData = await githubService.exchangeCodeForToken(code);
 
-    // Debug log to trace what GitHub returns
-    // console.log("GitHub Token Exchange Response:", JSON.stringify(tokenData, null, 2));
-
-    // Handle "error" in response body even if status is 200 (GitHub sometimes does this)
     if (tokenData.error) {
       console.error("GitHub Error:", tokenData.error, tokenData.error_description);
       return res.status(400).json({ message: `GitHub Error: ${tokenData.error_description || tokenData.error}` });
@@ -73,40 +69,45 @@ exports.githubCallback = async (req, res) => {
 
     // 2. Fetch user profile
     const profile = await githubService.fetchUserProfile(tokenData.access_token);
-    const email = profile.email; // Note: if email is private, we might need extra call
+    
+    // FIX: Handle cases where the GitHub email is private
+    let email = profile.email;
+    if (!email) {
+      const emails = await githubService.fetchUserEmails(tokenData.access_token);
+      // Priority: Primary & Verified > Primary > First available
+      const primaryEmailObj = emails.find(e => e.primary && e.verified) || 
+                              emails.find(e => e.primary) || 
+                              emails[0];
+      if (primaryEmailObj) {
+        email = primaryEmailObj.email;
+      }
+    }
 
     // 3. Find or Create User
+    if (!email) {
+      return res.status(400).json({ message: "Email not found in GitHub profile. Please allow email access." });
+    }
+
     let user = await User.findByGithubId(profile.id.toString());
 
     if (!user) {
-      if (email) {
-        // Check if user exists by email to link account
-        user = await User.findByEmail(email);
-        if (user) {
-          await User.updateGithubInfo(user.id, profile.id.toString(), profile.login, profile.avatar_url);
-        } else {
-          // Create new user
-          user = await User.createUser(email, null, profile.id.toString(), profile.login, profile.avatar_url);
-        }
+      user = await User.findByEmail(email);
+      if (user) {
+        await User.updateGithubInfo(user.id, profile.id.toString(), profile.login, profile.avatar_url);
       } else {
-        // No email in profile, handle edge case (e.g., error or require manual email content)
-        // For now, create a dummy email or error. Let's error for safety.
-        return res.status(400).json({ message: "Email not found in GitHub profile. Please allow email access." });
+        user = await User.createUser(email, null, profile.id.toString(), profile.login, profile.avatar_url);
       }
     }
 
     // 4. Generate Tokens
-    // Ensure we have an ID (user might be the result object from createUser or row from findBy...)
-    const userId = user.id || user.lastID; // createUser returns object with id
+    const userId = user.id || user.lastID;
     const { accessToken, refreshToken } = generateTokens(userId);
 
     await User.updateRefreshToken(userId, refreshToken);
     res.cookie("refreshToken", refreshToken, getCookieOptions());
 
     // 5. Redirect to Frontend
-    const frontendUrl = process.env.FRONTEND_URL || "http://127.0.0.1:5500/dashboard.html"; // Adjust default as needed
-    // Append tokens to URL (not most secure for access token, but standard for simple OAuth flows without backend sessions)
-    // Better: Redirect to a handler page that saves token.
+    const frontendUrl = process.env.FRONTEND_URL || "http://127.0.0.1:5500/dashboard.html";
     res.redirect(`${frontendUrl}?accessToken=${accessToken}&refreshToken=${refreshToken}`);
 
   } catch (error) {

@@ -3,34 +3,72 @@
  * Higher scores come from regular activity with fewer long gaps.
  */
 function calculateConsistencyScore(contributions) {
-    const dates = Object.keys(contributions).sort();
-    if (dates.length < 2) return 0;
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    const MIN_OBSERVATION_DAYS = 14;
 
-    let totalGaps = 0;
-    let burstFactor = 0;
+    // Strict ISO date parsing (YYYY-MM-DD only)
+    const parseDate = (dateStr) => {
+        const isoRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!isoRegex.test(dateStr)) return null;
+        const date = new Date(dateStr + "T00:00:00Z");
+        return isNaN(date.getTime()) ? null : date;
+    };
+
+    const dateEntries = Object.keys(contributions)
+        .map(d => ({ raw: d, parsed: parseDate(d) }))
+        .filter(d => d.parsed !== null)
+        .sort((a, b) => a.parsed - b.parsed);
+
+    if (dateEntries.length < 2) return 0;
+
+    const dates = dateEntries.map(d => d.parsed);
+    const values = dateEntries.map(d => contributions[d.raw]);
     const activityDays = dates.length;
 
+    let totalGaps = 0;
+
     for (let i = 1; i < dates.length; i++) {
-        const diffTime = Math.abs(new Date(dates[i]) - new Date(dates[i-1]));
-        const gapDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        // Penalize gaps longer than 7 days
-        if (gapDays > 7) totalGaps += gapDays;
-        
-        // Track burst activity (standard deviation proxy)
-        const diffCount = Math.abs(contributions[dates[i]] - contributions[dates[i-1]]);
-        burstFactor += diffCount;
+        const gapDays = Math.ceil(Math.abs(dates[i] - dates[i - 1]) / MS_PER_DAY);
+
+        // Penalize only excess beyond 7 days
+        if (gapDays > 7) totalGaps += (gapDays - 7);
     }
 
-    // Baseline: Ratio of active days to total span
-    const span = Math.ceil(Math.abs(new Date(dates[dates.length-1]) - new Date(dates[0])) / (1000 * 60 * 60 * 24)) || 1;
-    const frequencyScore = (activityDays / span) * 50;
+    const span = Math.max(
+        1,
+        Math.ceil(Math.abs(dates[dates.length - 1] - dates[0]) / MS_PER_DAY)
+    );
 
-    // Penalty: Subtract for long inactivity
-    const gapPenalty = Math.min(25, (totalGaps / span) * 50);
+    // ---- Frequency Component ----
+    let frequencyScore = (activityDays / span) * 50;
 
-    // Burst: High volatility in commit counts reduces consistency
-    const stabilityScore = Math.max(0, 25 - (burstFactor / (activityDays * 10)));
+    // Normalize short observation windows
+    if (span < MIN_OBSERVATION_DAYS) {
+        frequencyScore *= (span / MIN_OBSERVATION_DAYS);
+    }
 
-    return Math.round(frequencyScore + (25 - gapPenalty) + stabilityScore);
+    frequencyScore = Math.min(50, frequencyScore);
+
+    // ---- Gap Penalty Component ----
+    const gapPenalty = Math.min(25, (totalGaps / span) * 25);
+
+    // ---- Stability Component (Variance-based) ----
+    const mean =
+        values.reduce((sum, v) => sum + v, 0) / activityDays;
+
+    const variance =
+        values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) /
+        activityDays;
+
+    const normalizedVariance = mean > 0 ? variance / mean : variance;
+
+    const stabilityScore = Math.max(
+        0,
+        25 - Math.min(25, normalizedVariance)
+    );
+
+    const finalScore =
+        frequencyScore + (25 - gapPenalty) + stabilityScore;
+
+    return Math.max(0, Math.min(100, Math.round(finalScore)));
 }
