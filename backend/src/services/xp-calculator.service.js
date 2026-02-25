@@ -273,6 +273,78 @@ module.exports = {
     checkAchievements,
     awardActivityXP,
     getUserGamificationSummary,
+
+    // ─── Issue #616: Burnout Detection — Velocity Decay & Overload Signals ───
+
+    /**
+     * Detect velocity decay over a rolling window.
+     * Compares average XP earned in first half vs second half of the window.
+     * Negative return = developer is slowing down.
+     * @param {Array<number>} weeklyXP  - XP per week, oldest to newest
+     * @returns {Object} { decayRate, signal, trend }
+     */
+    detectVelocityDecay(weeklyXP = []) {
+        if (weeklyXP.length < 2) return { decayRate: 0, signal: 'INSUFFICIENT_DATA', trend: 'stable' };
+
+        const mid = Math.floor(weeklyXP.length / 2);
+        const early = weeklyXP.slice(0, mid);
+        const late = weeklyXP.slice(mid);
+
+        const avgEarly = early.reduce((a, b) => a + b, 0) / early.length;
+        const avgLate = late.reduce((a, b) => a + b, 0) / late.length;
+
+        const decayRate = avgEarly > 0
+            ? parseFloat(((avgEarly - avgLate) / avgEarly * 100).toFixed(1))
+            : 0;
+
+        return {
+            decayRate,
+            avgEarlyXP: parseFloat(avgEarly.toFixed(1)),
+            avgLateXP: parseFloat(avgLate.toFixed(1)),
+            signal: decayRate > 30 ? 'SEVERE_DECAY'
+                : decayRate > 15 ? 'MILD_DECAY'
+                    : decayRate < -15 ? 'ACCELERATING'
+                        : 'STABLE',
+            trend: decayRate > 10 ? 'declining' : decayRate < -10 ? 'rising' : 'stable'
+        };
+    },
+
+    /**
+     * Detect overload: contributor running above Max capacity for N consecutive weeks.
+     * @param {Array<number>} weeklyPoints  - story points delivered per week
+     * @param {number}        capacityLimit - max sustainable points/week
+     * @returns {Object} { overloaded, consecutiveWeeks, avgLoad, capacityRatio }
+     */
+    detectOverloadSignal(weeklyPoints = [], capacityLimit = 20) {
+        let consecutiveWeeks = 0;
+        let peak = 0;
+
+        for (let i = weeklyPoints.length - 1; i >= 0; i--) {
+            if (weeklyPoints[i] > capacityLimit) {
+                consecutiveWeeks++;
+                peak = Math.max(peak, weeklyPoints[i]);
+            } else {
+                break;
+            }
+        }
+
+        const recentAvg = weeklyPoints.length
+            ? weeklyPoints.slice(-4).reduce((a, b) => a + b, 0) / Math.min(4, weeklyPoints.length)
+            : 0;
+        const capacityRatio = capacityLimit > 0 ? parseFloat((recentAvg / capacityLimit).toFixed(2)) : 0;
+
+        return {
+            overloaded: consecutiveWeeks >= 2,
+            consecutiveWeeks,
+            peakLoad: peak,
+            avgRecentLoad: parseFloat(recentAvg.toFixed(1)),
+            capacityRatio,
+            signal: capacityRatio > 1.4 ? 'CRITICAL_OVERLOAD'
+                : capacityRatio > 1.15 ? 'OVERLOADED'
+                    : capacityRatio > 1.0 ? 'AT_CAPACITY'
+                        : 'HEALTHY'
+        };
+    }
     scoreEstimationAccuracy,
     computeEstimationPatternHistory
 };
