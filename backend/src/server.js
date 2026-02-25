@@ -15,8 +15,13 @@ server.listen(PORT, () => {
   console.log(`🚀 Auth server running on port ${PORT}`);
   console.log(`🔌 WebSocket server ready`);
 
-  // Start mock service for demo
-  mockGithubService.start();
+  // Start mock service only in non-production environments
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[MockService] Starting mock GitHub service (development/test mode)");
+    mockGithubService.start();
+  } else {
+    console.log("[MockService] Skipping mock GitHub service in production environment");
+  }
 
   // Start Analytics Queue Worker
   require('./worker/analytics.worker');
