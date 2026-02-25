@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAYTHEON | Developer Burnout Monitor</title>
+    <meta name="description"
+        content="Predictive developer burnout detection and automated workload rebalancing dashboard powered by cross-service analytics.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #060d18;
+            --surface: rgba(8, 18, 40, 0.88);
+            --border: rgba(239, 68, 68, 0.18);
+            --red: #ef4444;
+            --orange: #f97316;
+            --amber: #eab308;
+            --green: #22c55e;
+            --accent: #6366f1;
+            --text: #e2e8f0;
+            --muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            background-image: radial-gradient(ellipse 60% 30% at 50% -5%, rgba(239, 68, 68, 0.07), transparent);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .page-wrap {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        /* ── Header ─────────────── */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            backdrop-filter: blur(12px);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .page-header h1 span {
+            color: var(--red);
+        }
+
+        #scan-status {
+            font-size: 0.83rem;
+            color: var(--muted);
+            margin-top: 0.25rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.55rem 1.2rem;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.88rem;
+            font-family: 'Space Grotesk', sans-serif;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px);
+        }
+
+        .btn-red {
+            background: var(--red);
+        }
+
+        .btn-ghost {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* ── Layout ─────────────── */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .full {
+            margin-bottom: 1.25rem;
+        }
+
+        /* ── Cards ──────────────── */
+        .card {
+            background: var(--surface);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 1.4rem;
+            backdrop-filter: blur(8px);
+        }
+
+        .card h2 {
+            font-size: 0.95rem;
+            color: #fca5a5;
+            margin-bottom: 1rem;
+        }
+
+        /* ── Summary Banner ─────── */
+        #summary-banner {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            flex: 1;
+            min-width: 100px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .stat-num {
+            font-size: 2rem;
+            font-weight: 800;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .stat-label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-top: 0.25rem;
+        }
+
+        /* ── Heatmap Grid ───────── */
+        #heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .heatmap-cell {
+            position: relative;
+            background: linear-gradient(135deg, var(--cell-color, #6366f1) calc(var(--intensity, 50%) * 0.2), rgba(255, 255, 255, 0.03) 100%);
+            border: 1px solid var(--cell-color, #6366f1);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            cursor: default;
+            transition: transform 0.2s;
+        }
+
+        .heatmap-cell:hover {
+            transform: translateY(-2px);
+        }
+
+        .cell-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.1rem;
+            margin: 0 auto 0.4rem;
+        }
+
+        .cell-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .cell-score {
+            font-size: 1.6rem;
+            font-weight: 800;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .cell-level {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 0.2rem;
+        }
+
+        /* ── Tooltip ────────────── */
+        .tooltip-wrap:hover .cell-tooltip {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .cell-tooltip {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0d1f3c;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.78rem;
+            line-height: 1.6;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s;
+            z-index: 10;
+        }
+
+        /* ── At-Risk Cards ──────── */
+        #at-risk-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .risk-card {
+            border: 1px solid;
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .risk-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .risk-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .risk-name {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .risk-level {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 0.15rem;
+        }
+
+        .risk-signals {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .signal-chip {
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            border: 1px solid;
+        }
+
+        .signal-chip.ok {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .signal-chip.bad {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        /* ── Rebalance Panel ─────── */
+        .rebalance-summary {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.9rem;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        .rebalance-summary strong {
+            color: var(--text);
+        }
+
+        .reassignment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .reassignment-row {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+        }
+
+        .task-name {
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+        }
+
+        .points-chip {
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            margin-left: 0.4rem;
+        }
+
+        .transfer-arrow {
+            font-size: 0.82rem;
+            margin-bottom: 0.15rem;
+        }
+
+        .from-dev {
+            color: var(--red);
+            font-weight: 600;
+        }
+
+        .to-dev {
+            color: var(--green);
+            font-weight: 600;
+        }
+
+        .reason {
+            font-size: 0.72rem;
+            color: var(--muted);
+        }
+
+        .ok-msg {
+            color: var(--green);
+            font-size: 0.85rem;
+        }
+
+        canvas {
+            max-height: 280px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav id="navbar-placeholder"></nav>
+    <div class="page-wrap">
+
+        <!-- Header -->
+        <header class="page-header">
+            <div>
+                <h1>Developer <span>Burnout</span> Monitor</h1>
+                <p id="scan-status">Initializing burnout engine...</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-ghost" id="refresh-btn">🔍 Re-Scan Team</button>
+                <button class="btn btn-red" id="rebalance-btn">🔄 Auto-Rebalance</button>
+            </div>
+        </header>
+
+        <!-- Summary Stats -->
+        <div class="card full">
+            <h2>🩺 Team Wellbeing Overview</h2>
+            <div id="summary-banner">
+                <p class="muted" style="color:var(--muted)">Loading...</p>
+            </div>
+        </div>
+
+        <!-- Heatmap + Bar Chart -->
+        <div class="grid-2">
+            <div class="card">
+                <h2>🌡️ Burnout Risk Heatmap</h2>
+                <div id="heatmap-grid">
+                    <p style="color:var(--muted)">Loading...</p>
+                </div>
+            </div>
+            <div class="card">
+                <h2>📊 Risk Score Breakdown</h2>
+                <canvas id="risk-bar-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- At-Risk Members + Rebalance -->
+        <div class="grid-2">
+            <div class="card">
+                <h2>🚨 At-Risk Contributors</h2>
+                <div id="at-risk-list">
+                    <p style="color:var(--muted)">Loading...</p>
+                </div>
+            </div>
+            <div class="card">
+                <h2>🔀 Workload Rebalancing Plan</h2>
+                <div id="rebalance-panel">
+                    <p style="color:var(--muted)">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="frontend/js/burnout-dashboard.js"></script>
+    <script>
+        fetch('navbar.html').then(r => r.text()).then(html => {
+            document.getElementById('navbar-placeholder').innerHTML = html;
+        });
+    </script>
+</body>
+
+</html>
