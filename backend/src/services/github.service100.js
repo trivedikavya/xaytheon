@@ -22,7 +22,6 @@ class GithubService {
     async exchangeCodeForToken(code) {
         try {
             const { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } = process.env;
-            // Use local defaults if env vars not set (for testing purposes only)
             const clientId = GITHUB_CLIENT_ID || "YOUR_GITHUB_CLIENT_ID";
             const clientSecret = GITHUB_CLIENT_SECRET || "YOUR_GITHUB_CLIENT_SECRET";
 
@@ -59,29 +58,32 @@ class GithubService {
         }
     }
 
+    // UPDATED: Added pagination handling to fetch all repositories
     async fetchUserRepos(username) {
         try {
-            // Fetch top 100 repos sorted by updated
-            const response = await axios.get(`${this.baseUrl}/users/${username}/repos?per_page=100&sort=updated`, { headers: this.headers });
-            return response.data;
-        } catch (error) {
-            console.error(`Error fetching repos for ${username}:`, error.message);
-            throw error;
-        }
-    }
+            let allRepos = [];
+            let nextUrl = `${this.baseUrl}/users/${username}/repos?per_page=100&sort=updated`;
 
-    // NEW: Fetch all email addresses for the user (including private ones)
-    async fetchUserEmails(accessToken) {
-        try {
-            const response = await axios.get(`${this.baseUrl}/user/emails`, {
-                headers: {
-                    ...this.headers,
-                    Authorization: `token ${accessToken}`
+            while (nextUrl) {
+                const response = await axios.get(nextUrl, { headers: this.headers });
+                allRepos = allRepos.concat(response.data);
+
+                // Handle Pagination via Link Header
+                const linkHeader = response.headers.link;
+                nextUrl = null;
+
+                if (linkHeader) {
+                    const links = linkHeader.split(',');
+                    const nextLink = links.find(link => link.includes('rel="next"'));
+                    if (nextLink) {
+                        const match = nextLink.match(/<(.*)>/);
+                        if (match) nextUrl = match[1];
+                    }
                 }
-            });
-            return response.data;
+            }
+            return allRepos;
         } catch (error) {
-            console.error('Error fetching user emails:', error.message);
+            console.error(`Error fetching all repos for ${username}:`, error.message);
             throw error;
         }
     }
@@ -95,7 +97,6 @@ class GithubService {
         const stars = repos.reduce((acc, repo) => acc + repo.stargazers_count, 0);
         const forkCount = repos.reduce((acc, repo) => acc + repo.forks_count, 0);
 
-        // Calculate language stats
         const languages = {};
         repos.forEach(repo => {
             if (repo.language) {
@@ -108,9 +109,9 @@ class GithubService {
             followers: user.followers,
             following: user.following,
             publicRepos: user.public_repos,
-            totalCommits: 0, // Requires more complex fetching (events or individual repo commits), setting 0 for now
+            totalCommits: 0,
             languageStats: languages,
-            contributionCount: 0 // Requires GraphQL or scraping, setting 0 for now
+            contributionCount: 0 
         };
     }
 }

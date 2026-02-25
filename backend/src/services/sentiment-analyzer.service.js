@@ -105,7 +105,7 @@ class SentimentAnalyzerService {
 
         for (let i = 0; i < count; i++) {
             const date = new Date(today);
-            date.setDate(today.getDate() - Math.floor(Math.random() * 30)); // 30 days back
+            date.setDate(today.getDate() - Math.floor(Math.random() * 30));
 
             comments.push({
                 id: i,
@@ -116,6 +116,68 @@ class SentimentAnalyzerService {
             });
         }
         return comments;
+    }
+
+    // ─── Issue #616: Burnout Detection — Longitudinal Mood Tracker ───────────
+
+    /**
+     * Build a 14-day rolling mood timeline for a contributor.
+     * Returns a labelled array of daily average sentiment scores.
+     * @param {string} username
+     * @param {Array<{user, created_at, body}>} comments  - pre-fetched comments
+     * @returns {Object} { username, moodTimeline, moodTrend, burnoutFlag }
+     */
+    buildMoodTimeline(username, comments = null) {
+        // Use mock if none passed
+        if (!comments) comments = this.generateMockComments(80);
+
+        const userComments = comments.filter(c => c.user === username);
+        if (userComments.length === 0) {
+            return { username, moodTimeline: [], moodTrend: 'stable', burnoutFlag: false };
+        }
+
+        // Bucket into last 14 days
+        const today = new Date();
+        const timeline = [];
+        for (let d = 13; d >= 0; d--) {
+            const day = new Date(today);
+            day.setDate(today.getDate() - d);
+            const dateStr = day.toISOString().split('T')[0];
+
+            const dayComments = userComments.filter(c => c.created_at.startsWith(dateStr));
+            const avgScore = dayComments.length
+                ? dayComments.reduce((sum, c) => sum + this.sentiment.analyze(c.body).score, 0) / dayComments.length
+                : null;
+
+            timeline.push({ date: dateStr, score: avgScore !== null ? parseFloat(avgScore.toFixed(2)) : null, count: dayComments.length });
+        }
+
+        // Trend: compare first 7 vs last 7 days
+        const firstHalf = timeline.slice(0, 7).filter(d => d.score !== null).map(d => d.score);
+        const secondHalf = timeline.slice(7).filter(d => d.score !== null).map(d => d.score);
+        const avg1 = firstHalf.length ? firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length : 0;
+        const avg2 = secondHalf.length ? secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length : 0;
+
+        const moodTrend = avg2 < avg1 - 1 ? 'declining' : avg2 > avg1 + 1 ? 'improving' : 'stable';
+
+        // Burnout flag: sustained negative sentiment (avg < -1) and declining trend
+        const overallAvg = [...firstHalf, ...secondHalf].reduce((a, b) => a + b, 0) / (firstHalf.length + secondHalf.length || 1);
+        const burnoutFlag = overallAvg < -0.8 && moodTrend === 'declining';
+
+        return { username, moodTimeline: timeline, moodTrend, burnoutFlag, overallAvg: parseFloat(overallAvg.toFixed(2)) };
+    }
+
+    /**
+     * Scan all team members and return burnout mood flags.
+     * @param {string[]} usernames
+     * @returns {Array<{username, burnoutFlag, moodTrend, overallAvg}>}
+     */
+    scanTeamMoodFlags(usernames = []) {
+        const allComments = this.generateMockComments(200);
+        return usernames.map(u => {
+            const result = this.buildMoodTimeline(u, allComments);
+            return { username: u, burnoutFlag: result.burnoutFlag, moodTrend: result.moodTrend, overallAvg: result.overallAvg };
+        });
     }
 }
 
