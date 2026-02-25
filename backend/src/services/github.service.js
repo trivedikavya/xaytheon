@@ -70,6 +70,22 @@ class GithubService {
         }
     }
 
+    // NEW: Fetch all email addresses for the user (including private ones)
+    async fetchUserEmails(accessToken) {
+        try {
+            const response = await axios.get(`${this.baseUrl}/user/emails`, {
+                headers: {
+                    ...this.headers,
+                    Authorization: `token ${accessToken}`
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching user emails:', error.message);
+            throw error;
+        }
+    }
+
     async getAnalyticsData(username) {
         const [user, repos] = await Promise.all([
             this.fetchUserData(username),
