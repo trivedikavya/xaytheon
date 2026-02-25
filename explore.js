@@ -535,3 +535,57 @@ setStatus(`Loaded ${repos.length} repositories`);
   debouncedExplore();
 })();
 console.log(exploreData.repos.map(r => r.trendScore));
+
+import { calculateTrendScore } from "./trendScore.js";
+
+(function () {
+  const form = document.getElementById("explore-form");
+  if (!form) return;
+
+  const topicEl = document.getElementById("ex-base-topic");
+  const langEl = document.getElementById("ex-language");
+  const statusEl = document.getElementById("ex-status");
+
+  async function explore(e) {
+    if (e) e.preventDefault();
+    
+    const base = topicEl.value.trim();
+    const lang = langEl.value;
+    
+    statusEl.textContent = "Searching...";
+    
+    try {
+      const q = encodeURIComponent(`topic:${base} ${lang ? `language:${lang}` : ""}`);
+      const res = await fetch(`https://api.github.com/search/repositories?q=${q}&sort=stars`);
+      const data = await res.json();
+      
+      const scoredRepos = data.items.map(repo => ({
+        ...repo,
+        trendScore: calculateTrendScore({
+          stars7d: repo.stargazers_count / 100, // Simulated growth
+          totalStars: repo.stargazers_count,
+          lastCommit: repo.updated_at
+        })
+      })).sort((a, b) => b.trendScore - a.trendScore);
+
+      renderRepoList(scoredRepos);
+      statusEl.textContent = `Found ${scoredRepos.length} results.`;
+    } catch (err) {
+      statusEl.textContent = "Error loading data.";
+    }
+  }
+
+  function renderRepoList(repos) {
+    const list = document.getElementById("repo-list");
+    list.innerHTML = repos.map(r => `
+      <tr>
+        <td><a href="${r.html_url}">${r.full_name}</a></td>
+        <td>${r.language || "-"}</td>
+        <td>${r.stargazers_count}</td>
+        <td>${Math.round(r.trendScore)}</td>
+      </tr>
+    `).join('');
+  }
+
+  form.addEventListener("submit", explore);
+})();

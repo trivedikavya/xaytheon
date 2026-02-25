@@ -1,37 +1,26 @@
 /**
  * Predictive Analytics Routes
- * API endpoints for forecasting, velocity tracking, and burnout detection
+ * Extended (Issue #616): burnout-risk and rebalance routes
  */
 
 const express = require('express');
 const router = express.Router();
 const predictiveController = require('../controllers/predictive.controller');
 
-// Velocity tracking
-router.get('/velocity', predictiveController.getVelocity);
+router.get('/velocity', predictiveController.getVelocity.bind(predictiveController));
+router.post('/forecast/milestone', predictiveController.forecastMilestone.bind(predictiveController));
+router.post('/simulate', predictiveController.simulateScenario.bind(predictiveController));
+router.get('/bottlenecks', predictiveController.analyzeBottlenecks.bind(predictiveController));
+router.get('/burndown', predictiveController.getBurndown.bind(predictiveController));
+router.post('/burnout', predictiveController.detectBurnout.bind(predictiveController));
+router.post('/sentiment', predictiveController.analyzeSentiment.bind(predictiveController));
+router.get('/health', predictiveController.getProjectHealth.bind(predictiveController));
+router.post('/compare', predictiveController.compareHistorical.bind(predictiveController));
 
-// Milestone forecasting
-router.post('/forecast/milestone', predictiveController.forecastMilestone);
-
-// What-if scenario simulation
-router.post('/simulate', predictiveController.simulateScenario);
-
-// Bottleneck analysis
-router.get('/bottlenecks', predictiveController.analyzeBottlenecks);
-
-// Sprint burndown
-router.get('/burndown', predictiveController.getBurndown);
-
-// Burnout detection
-router.post('/burnout', predictiveController.detectBurnout);
-
-// Sentiment analysis
-router.post('/sentiment', predictiveController.analyzeSentiment);
-
-// Project health overview
-router.get('/health', predictiveController.getProjectHealth);
-
-// Historical comparison
-router.post('/compare', predictiveController.compareHistorical);
+// Issue #616 — Burnout Detection & Workload Rebalancing
+// Returns per-dev burnout risk scores aggregated from all 4 services
+router.post('/burnout-risk', predictiveController.getBurnoutRisk.bind(predictiveController));
+// Auto-generates ticket reassignment proposals for at-risk devs
+router.post('/rebalance', predictiveController.rebalanceWorkload.bind(predictiveController));
 
 module.exports = router;
