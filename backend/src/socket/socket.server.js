@@ -194,25 +194,25 @@ function initializeSocket(server) {
             });
         });
 
-        // RESOURCE: Join efficiency house
-        socket.on("join_efficiency_ops", () => {
-            socket.join("efficiency_ops_room");
-            console.log(`💰 User ${socket.userId} joined Cost Efficiency Ops`);
+        // GRAPH: Join impact room
+        socket.on("join_impact_monitor", () => {
+            socket.join("impact_monitor_room");
+            console.log(`🌲 User ${socket.userId} joined Neural Dependency Graph`);
         });
 
-        // RESOURCE: Broadcast cost alert
-        socket.on("cost_threshold_exceeded", (data) => {
-            io.to("efficiency_ops_room").emit("cost_alert", {
-                ...data,
-                alertId: `COST_${Date.now()}`
+        // GRAPH: Sync graph topology
+        socket.on("graph_topology_sync", (graphData) => {
+            io.to("impact_monitor_room").emit("graph_update", {
+                ...graphData,
+                syncedAt: Date.now()
             });
         });
 
-        // RESOURCE: Scaling suggestion
-        socket.on("scaling_suggestion_broadcast", (suggestion) => {
-            io.to("efficiency_ops_room").emit("scaling_event", {
-                ...suggestion,
-                suggestedAt: Date.now()
+        // GRAPH: Broadcast impact analysis
+        socket.on("broadcast_impact", (analysis) => {
+            io.to("impact_monitor_room").emit("impact_calculated", {
+                ...analysis,
+                calculatedAt: Date.now()
             });
         });
 
