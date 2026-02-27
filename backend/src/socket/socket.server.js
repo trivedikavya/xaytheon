@@ -194,25 +194,26 @@ function initializeSocket(server) {
             });
         });
 
-        // SECURITY: Join security radar
-        socket.on("join_security_radar", () => {
-            socket.join("security_radar_room");
-            console.log(`🛡️ User ${socket.userId} joined Security Radar`);
+        // GOVERNANCE: Join governance monitors
+        socket.on("join_governance", () => {
+            socket.join("governance_room");
+            console.log(`⚖️ User ${socket.userId} joined Governance Hub`);
         });
 
-        // SECURITY: Vulnerability alert
-        socket.on("security_threat_detected", (finding) => {
-            io.to("security_radar_room").emit("vuln_alert", {
-                ...finding,
-                detectedAt: Date.now()
+        // GOVERNANCE: Broadcast new proposal
+        socket.on("proposal_created", (proposal) => {
+            io.to("governance_room").emit("new_resolution", {
+                ...proposal,
+                serverTime: Date.now()
             });
         });
 
-        // SECURITY: Patch proposed
-        socket.on("security_patch_proposed", (patch) => {
-            io.to("security_radar_room").emit("patch_alert", {
-                ...patch,
-                proposedAt: Date.now()
+        // GOVERNANCE: Vote update
+        socket.on("vote_cast", (data) => {
+            io.to("governance_room").emit("resolution_vote_update", {
+                proposalId: data.proposalId,
+                currentVotes: data.currentVotes,
+                totalNeeded: data.totalNeeded
             });
         });
 
