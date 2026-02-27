@@ -290,6 +290,11 @@ function initializeSocket(server) {
     });
 
     console.log("🔌 WebSocket server initialized");
+
+    // \u2500\u2500 Issue #615: Notification Engine \u2014 Late hook wired to io directly \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    // These are global io-level hooks (not per-socket) for server-originated pushes.
+    // Individual socket events (notification_ack, digest_flush) are handled per-socket above.
+
     startRealTimeSimulation(io);
     return io;
 }
