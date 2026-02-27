@@ -5,14 +5,26 @@ const { processAnalyticsJob } = require('../services/analytics.processor');
 let analyticsQueue;
 
 try {
-    analyticsQueue = new Queue('analytics-processing', { connection });
+    analyticsQueue = new Queue('analytics-processing', {
+        connection,
+        defaultJobOptions: {
+            attempts: 5,
+            backoff: {
+                type: 'exponential',
+                delay: 2000
+            },
+            timeout: 60000,
+            removeOnComplete: { age: 3600 },
+            removeOnFail: { age: 86400 }
+        }
+    });
 
     analyticsQueue.on('error', (err) => {
         // Suppress unhandled redis errors in queue
-        console.warn('Queue Redis Error:', err.message);
+        console.warn('Queue Redis Error:', err);
     });
 } catch (err) {
-    console.warn("⚠️ Failed to initialize BullMQ Queue (Redis missing?):", err.message);
+    console.warn("⚠️ Failed to initialize BullMQ Queue (Redis missing?):", err);
 }
 
 /**
@@ -22,26 +34,26 @@ try {
  */
 const addAnalyticsJob = async (userId, githubUsername) => {
     try {
-        // Check IORedis status
-        if (analyticsQueue && connection.status === 'ready') {
-            return await analyticsQueue.add('process-analytics', {
+        if (!analyticsQueue) {
+            throw new Error('Queue not initialized');
+        }
+
+        const jobId = `${userId}:${githubUsername}`;
+
+        return await analyticsQueue.add(
+            'process-analytics',
+            {
                 userId,
                 githubUsername
-            }, {
-                removeOnComplete: true,
-                removeOnFail: 5000
-            });
-        } else {
-            throw new Error(`Redis status: ${connection.status || 'unknown'}`);
-        }
+            },
+            {
+                jobId
+            }
+        );
+
     } catch (err) {
-        console.warn(`⚠️ Queue unavailable (${err.message}). Running job IN-MEMORY (Fallback).`);
-
-        // Execute logic directly (async, mimic background job)
-        processAnalyticsJob({ userId, githubUsername })
-            .catch(e => console.error("Inline Fallback Failed:", e.message));
-
-        return null;
+        console.error(`❌ Queue unavailable (${err.message}). Job not executed.`);
+        throw err;
     }
 };
 
