@@ -194,26 +194,25 @@ function initializeSocket(server) {
             });
         });
 
-        // SERVICE MESH: Join mesh monitoring
-        socket.on("join_mesh_monitor", () => {
-            socket.join("mesh_monitor_room");
-            console.log(`🌐 User ${socket.userId} joined Service Mesh Monitor`);
+        // RESOURCE: Join efficiency house
+        socket.on("join_efficiency_ops", () => {
+            socket.join("efficiency_ops_room");
+            console.log(`💰 User ${socket.userId} joined Cost Efficiency Ops`);
         });
 
-        // SERVICE MESH: Broadcast node health updates
-        socket.on("mesh_node_update", (nodeData) => {
-            io.to("mesh_monitor_room").emit("node_health_changed", {
-                ...nodeData,
-                updatedAt: Date.now()
+        // RESOURCE: Broadcast cost alert
+        socket.on("cost_threshold_exceeded", (data) => {
+            io.to("efficiency_ops_room").emit("cost_alert", {
+                ...data,
+                alertId: `COST_${Date.now()}`
             });
         });
 
-        // SERVICE MESH: Alert for cascading failures
-        socket.on("cascaded_failure_alert", (alert) => {
-            io.to("mesh_monitor_room").emit("mesh_critical_incident", {
-                ...alert,
-                incidentId: `MESH_${Date.now()}`,
-                timestamp: Date.now()
+        // RESOURCE: Scaling suggestion
+        socket.on("scaling_suggestion_broadcast", (suggestion) => {
+            io.to("efficiency_ops_room").emit("scaling_event", {
+                ...suggestion,
+                suggestedAt: Date.now()
             });
         });
 
