@@ -940,3 +940,28 @@ function fetchRepos(key) {
 
 IN_FLIGHT_REQUESTS.set(key, promise);
 return promise;
+//navbar block with this:
+window.initNavbar = function() {
+  const menuIcon = document.querySelector(".menu-icon");
+  const menuCloseIcon = document.querySelector(".menu-close-icon");
+  const navMenu = document.querySelector(".nav-menu");
+  const navActions = document.querySelector(".nav-actions");
+  const body = document.body;
+
+  if (!menuIcon || !menuCloseIcon || !navMenu) return;
+
+  menuIcon.onclick = () => {
+    navMenu.classList.add("active");
+    navActions?.classList.add("active");
+    menuCloseIcon.classList.add("active");
+    body.classList.add("menu-open");
+  };
+
+  menuCloseIcon.onclick = () => {
+    navMenu.classList.remove("active");
+    navActions?.classList.remove("active");
+    menuCloseIcon.classList.remove("active");
+    body.classList.remove("menu-open");
+  };
+};
+}
