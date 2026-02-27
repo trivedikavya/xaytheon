@@ -13,7 +13,31 @@
     <script defer src="auth.js?v=1.0.0"></script>
        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
+<style>
+    /* UPDATED: Better contrast for bot messages */
+.bot-msg .msg-content {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Adds depth */
+}
 
+/* UPDATED: Modern sidebar cards */
+.summary-card, .suggestions-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    transition: transform 0.3s ease;
+}
+
+.summary-card:hover {
+    transform: translateY(-5px); /* Interactive engagement */
+}
+
+.summary-text {
+    color: var(--text-primary); /* Fixes visibility issue */
+    font-weight: 400;
+}
+</style>
 <body class="eightgon-page">
     <div class="page-wrapper">
         <div id="header-placeholder"></div>
