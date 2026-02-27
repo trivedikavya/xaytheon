@@ -1,0 +1,23 @@
+# ============================================
+#  Xaytheon Backend — Dockerfile
+# ============================================
+FROM node:20-alpine
+
+WORKDIR /app/backend
+
+# Install deps first (better layer caching)
+COPY backend/package.json backend/package-lock.json ./
+RUN npm ci --omit=dev
+
+# Copy source
+COPY backend/ ./
+
+# Create .env from example if not present
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
+
+# Seed demo data
+RUN node scripts/seed-data.js || true
+
+EXPOSE 5000
+
+CMD ["node", "src/server.js"]

@@ -329,6 +329,8 @@ class SprintOptimizerService {
                 toDevs: [...new Set(reassignments.map(r => r.to))]
             }
         };
+    }
+
     _estimateCalibrationConfidence(calibratedTeam) {
         const mults = calibratedTeam.map(d => d.calibrationMultiplier || 1.0);
         const avgDeviation = mults.reduce((s, m) => s + Math.abs(1 - m), 0) / mults.length;

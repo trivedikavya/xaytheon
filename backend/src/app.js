@@ -5,6 +5,7 @@ require("dotenv").config();
 
 const loadingMiddleware = require("./middleware/loading.middleware");
 const requestLock = require("./middleware/requestLock.middleware");
+const gatewayMiddleware = require("./middleware/gateway.middleware");
 
 const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");

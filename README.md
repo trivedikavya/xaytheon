@@ -13,6 +13,140 @@ Before contributing, please read CONTRIBUTION.md carefully.
 
 ---
 
+## 🚀 Run Xaytheon Locally
+
+### Prerequisites
+
+| Tool | Version | Required? | Notes |
+|------|---------|-----------|-------|
+| **Node.js** | 18+ | ✅ Yes | [Download](https://nodejs.org) |
+| **npm** | 9+ | ✅ Yes | Comes with Node.js |
+| **Git** | any | ✅ Yes | To clone the repo |
+| **Redis** | 7+ | ⬜ Optional | Needed for analytics queue (BullMQ). A Windows binary is included in `redis/` |
+| **Docker** | 20+ | ⬜ Optional | Only if you prefer Docker setup |
+
+### Option A — One-Command Setup (Recommended)
+
+Clone the repo and run a single script that installs everything, seeds demo data, and starts the server:
+
+```bash
+git clone https://github.com/Saatvik-GT/xaytheon.git
+cd xaytheon
+
+# macOS / Linux
+bash setup.sh
+
+# Windows
+.\setup.bat
+```
+
+The script will:
+1. Check that Node.js 18+ and npm are installed
+2. Install root and backend dependencies
+3. Create `backend/.env` from `.env.example`
+4. Seed the database with demo data (user, watchlists, analytics, etc.)
+5. Start the backend dev server on `http://localhost:5000`
+
+Then open the frontend with **VS Code Live Server** (or any static file server) at `http://127.0.0.1:5500`.
+
+### Option B — Manual Setup
+
+```bash
+# 1. Clone & enter the project
+git clone https://github.com/Saatvik-GT/xaytheon.git
+cd xaytheon
+
+# 2. Install root dependencies
+npm install
+
+# 3. Set up the backend
+cd backend
+npm install
+
+# 4. Create your .env (edit as needed)
+cp .env.example .env
+
+# 5. (Optional) Seed demo data for instant dashboards
+npm run seed
+
+# 6. Start the backend
+npm run dev          # uses nodemon for hot-reload
+# or: npm start     # plain node
+```
+
+Then open `index.html` in your browser using Live Server or any static server.
+
+### Option C — Docker (includes Redis)
+
+No local Node.js/Redis needed — everything runs in containers.
+
+```bash
+git clone https://github.com/Saatvik-GT/xaytheon.git
+cd xaytheon
+
+# Create backend .env first
+cp backend/.env.example backend/.env
+
+# Build & start all services
+docker-compose up --build
+```
+
+| Service | URL |
+|---------|-----|
+| Frontend | [http://localhost:8080](http://localhost:8080) |
+| Backend API | [http://localhost:5000](http://localhost:5000) |
+| Redis | `localhost:6379` |
+
+### Environment Variables
+
+After setup, edit `backend/.env` to customise your instance:
+
+```env
+PORT=5000                              # Backend port
+JWT_SECRET=change_me_to_a_random_string # Auth token secret
+FRONTEND_URL=http://127.0.0.1:5500     # Frontend origin (CORS)
+API_URL=http://127.0.0.1:5000          # Backend origin
+
+# GitHub OAuth (optional — for "Login with GitHub")
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+# See SETUP_GITHUB_OAUTH.md for step-by-step instructions
+```
+
+> **Tip:** Email variables (`EMAIL_HOST`, `EMAIL_USER`, etc.) are only needed for password-reset emails. You can leave them blank for local development.
+
+### Demo Data & Credentials
+
+Running `npm run seed` (or the setup script) creates a ready-to-use demo account:
+
+| Field | Value |
+|-------|-------|
+| Email | `demo@xaytheon.dev` |
+| Password | `demo1234` |
+
+The seed script also populates:
+- 📋 A **"Trending Repos" watchlist** with 5 popular repositories
+- 📊 **30 days of analytics snapshots** (stars, followers, commits)
+- 🔔 **Sample notifications** (stars, forks, issues, PRs)
+- 🏆 **Starter achievements** (Welcome Aboard, Watcher, etc.)
+
+This means dashboards will display meaningful data immediately — no GitHub token required.
+
+### Redis (Optional)
+
+Redis is required for the background analytics queue (BullMQ). If Redis isn't running, the backend still starts — but queued analytics jobs won't process.
+
+**Quick start:**
+```bash
+# Docker
+docker run -d -p 6379:6379 redis
+
+# Windows (included binary)
+redis\redis-server.exe
+```
+
+---
+
 ## Key Features & Pages
 
 ### 1. **Home/Landing Page** (index.html)
