@@ -194,6 +194,39 @@ function initializeSocket(server) {
             });
         });
 
+        // \u2500\u2500\u2500 Issue #615: Unified Notification Engine \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+        // Client ACKs a received notification (delivery receipt confirmation)
+        socket.on("notification_ack", ({ receiptToken }) => {
+            if (!receiptToken) return;
+            // Broadcast receipt update to admin monitors on the same user's room
+            io.to(`user:${socket.userId}`).emit("receipt_update", {
+                receiptToken,
+                status: 'delivered',
+                ackedAt: Date.now(),
+                ackedBy: socket.id
+            });
+            console.log(`✅ notification_ack from ${socket.userId}: ${receiptToken}`);
+        });
+
+        // Client requests an immediate digest flush (instead of waiting for window)
+        socket.on("digest_flush", ({ windowId } = {}) => {
+            // Server emits the flushed bundle back to this socket only
+            socket.emit("digest_ready", {
+                windowId: windowId || `flush_${Date.now()}`,
+                flushedAt: Date.now(),
+                message: 'Digest window force-flushed. Fetch /api/notifications/digest for bundle.'
+            });
+        });
+
+        // Server → Client: push a single realtime notification directly to a user room
+        // Called internally: io.to(`user:${userId}`).emit("notification_push", payload)
+        // Exposed here as a broadcast relay from server logic
+        socket.on("notification_send", ({ targetUserId, notification }) => {
+            if (!targetUserId || !notification) return;
+            io.to(`user:${targetUserId}`).emit("notification_push", {
+                ...notification,
+                sentAt: Date.now(),
+                sentBy: socket.userId
         // ─── Issue #616: Burnout Detection ─────────────────────────────────
         // Join the team burnout monitoring room
         socket.on("join_burnout_monitor", ({ teamId }) => {
@@ -268,6 +301,11 @@ function initializeSocket(server) {
     });
 
     console.log("🔌 WebSocket server initialized");
+
+    // \u2500\u2500 Issue #615: Notification Engine \u2014 Late hook wired to io directly \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    // These are global io-level hooks (not per-socket) for server-originated pushes.
+    // Individual socket events (notification_ack, digest_flush) are handled per-socket above.
+
     startRealTimeSimulation(io);
     return io;
 }
