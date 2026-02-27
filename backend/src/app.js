@@ -33,7 +33,7 @@ const sprintRoutes = require("./routes/sprint.routes");
 const sprintForecasterRoutes = require("./routes/sprint-forecaster.routes");
 const securityRoutes = require("./routes/security.routes");
 const auditRoutes = require("./routes/audit.routes");
-const graphRoutes = require("./routes/graph.routes");
+const securityRoutes = require("./routes/security.routes");
 
 const app = express();
 
@@ -170,7 +170,7 @@ app.use("/api/sprint", sprintRoutes);
 app.use("/api/sprint-forecaster", sprintForecasterRoutes);
 app.use("/api/security", securityRoutes);
 app.use("/api/audit", auditRoutes);
-app.use("/api/graph", graphRoutes);
+app.use("/api/security", securityRoutes);
 
 app.use((err, req, res, next) => {
   console.error("Error:", err);

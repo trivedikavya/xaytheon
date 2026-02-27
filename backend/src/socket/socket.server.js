@@ -194,25 +194,25 @@ function initializeSocket(server) {
             });
         });
 
-        // GRAPH: Join impact room
-        socket.on("join_impact_monitor", () => {
-            socket.join("impact_monitor_room");
-            console.log(`🌲 User ${socket.userId} joined Neural Dependency Graph`);
+        // SECURITY: Join security radar
+        socket.on("join_security_radar", () => {
+            socket.join("security_radar_room");
+            console.log(`🛡️ User ${socket.userId} joined Security Radar`);
         });
 
-        // GRAPH: Sync graph topology
-        socket.on("graph_topology_sync", (graphData) => {
-            io.to("impact_monitor_room").emit("graph_update", {
-                ...graphData,
-                syncedAt: Date.now()
+        // SECURITY: Vulnerability alert
+        socket.on("security_threat_detected", (finding) => {
+            io.to("security_radar_room").emit("vuln_alert", {
+                ...finding,
+                detectedAt: Date.now()
             });
         });
 
-        // GRAPH: Broadcast impact analysis
-        socket.on("broadcast_impact", (analysis) => {
-            io.to("impact_monitor_room").emit("impact_calculated", {
-                ...analysis,
-                calculatedAt: Date.now()
+        // SECURITY: Patch proposed
+        socket.on("security_patch_proposed", (patch) => {
+            io.to("security_radar_room").emit("patch_alert", {
+                ...patch,
+                proposedAt: Date.now()
             });
         });
 
