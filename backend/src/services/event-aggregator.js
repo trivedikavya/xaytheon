@@ -9,12 +9,12 @@ class EventAggregator extends EventEmitter {
     constructor(geospatialService, options = {}) {
         super();
         this.geospatialService = geospatialService;
-        
+
         // Configuration
         this.batchInterval = options.batchInterval || 100; // ms
         this.maxBatchSize = options.maxBatchSize || 50;
         this.eventTTL = options.eventTTL || 60000; // 1 minute
-        
+
         // State
         this.pendingEvents = [];
         this.eventHistory = new Map();
@@ -24,7 +24,7 @@ class EventAggregator extends EventEmitter {
             eventsDropped: 0,
             averageBatchSize: 0
         };
-        
+
         // Rate limiting
         this.rateLimiter = {
             windowMs: 1000,
@@ -32,10 +32,10 @@ class EventAggregator extends EventEmitter {
             window: [],
             windowStart: Date.now()
         };
-        
+
         // Start batch processor
         this.startBatchProcessor();
-        
+
         // Start cleanup routine
         this.startCleanupRoutine();
     }
@@ -59,16 +59,16 @@ class EventAggregator extends EventEmitter {
 
             // Enrich event data
             const enrichedEvent = await this.enrichEvent(event);
-            
+
             // Add to pending batch
             this.pendingEvents.push(enrichedEvent);
-            
+
             // Track in history
             this.eventHistory.set(eventId, {
                 timestamp: Date.now(),
                 type: enrichedEvent.type
             });
-            
+
             this.statistics.totalProcessed++;
 
             // Process immediately if batch is full
@@ -91,7 +91,7 @@ class EventAggregator extends EventEmitter {
         const type = event.type || 'unknown';
         const timestamp = event.created_at || new Date().toISOString();
         const actor = event.actor?.login || event.sender?.login || 'unknown';
-        
+
         return `${repo}-${type}-${actor}-${timestamp}`;
     }
 
@@ -116,16 +116,16 @@ class EventAggregator extends EventEmitter {
      */
     calculateEventPriority(event) {
         const type = event.type || '';
-        
+
         // High priority events
         if (type.includes('Release')) return 3;
         if (type.includes('PullRequest')) return 2;
         if (type.includes('Push')) return 2;
-        
+
         // Medium priority
         if (type.includes('Issue')) return 1;
         if (type.includes('Star')) return 1;
-        
+
         // Low priority
         return 0;
     }
@@ -142,7 +142,7 @@ class EventAggregator extends EventEmitter {
             .filter(e => e.timestamp > Date.now() - 300000); // Last 5 minutes
 
         const repoEvents = recentEvents.filter(e => e.repo === repo);
-        
+
         // Simple trending score: events in last 5 minutes
         return Math.min(repoEvents.length / 10, 1); // Normalized to 0-1
     }
@@ -188,15 +188,15 @@ class EventAggregator extends EventEmitter {
 
         // Sort by priority
         const sortedEvents = this.pendingEvents.sort((a, b) => b.priority - a.priority);
-        
+
         // Take batch
         const batch = sortedEvents.slice(0, this.maxBatchSize);
         this.pendingEvents = sortedEvents.slice(this.maxBatchSize);
 
         // Update statistics
         this.statistics.batchesSent++;
-        this.statistics.averageBatchSize = 
-            (this.statistics.averageBatchSize * (this.statistics.batchesSent - 1) + batch.length) 
+        this.statistics.averageBatchSize =
+            (this.statistics.averageBatchSize * (this.statistics.batchesSent - 1) + batch.length)
             / this.statistics.batchesSent;
 
         // Send to geospatial service
@@ -209,7 +209,7 @@ class EventAggregator extends EventEmitter {
     async sendBatch(events) {
         try {
             // Process each event through geospatial service
-            const promises = events.map(event => 
+            const promises = events.map(event =>
                 this.geospatialService.processGitHubEvent(event)
             );
 
@@ -340,41 +340,191 @@ class EventAggregator extends EventEmitter {
     generateRandomPayload(type) {
         switch (type) {
             case 'PushEvent':
-                return {
-                    commits: Array(Math.floor(Math.random() * 5) + 1).fill({}),
-                    ref: 'refs/heads/main'
-                };
+                return { commits: Array(Math.floor(Math.random() * 5) + 1).fill({}), ref: 'refs/heads/main' };
             case 'PullRequestEvent':
-                return {
-                    action: Math.random() > 0.5 ? 'opened' : 'closed',
-                    pull_request: {
-                        number: Math.floor(Math.random() * 1000),
-                        title: 'Test PR'
-                    }
-                };
+                return { action: Math.random() > 0.5 ? 'opened' : 'closed', pull_request: { number: Math.floor(Math.random() * 1000), title: 'Test PR' } };
             case 'IssuesEvent':
-                return {
-                    action: Math.random() > 0.5 ? 'opened' : 'closed',
-                    issue: {
-                        number: Math.floor(Math.random() * 1000),
-                        title: 'Test Issue'
-                    }
-                };
+                return { action: Math.random() > 0.5 ? 'opened' : 'closed', issue: { number: Math.floor(Math.random() * 1000), title: 'Test Issue' } };
             default:
                 return {};
         }
+    }
+
+    // ─── Issue #615: Per-User Filtering, Priority Scoring & Delivery Receipts ────
+
+    /**
+     * Per-user filter preferences storage.
+     * userId -> { minPriority, allowedTypes, channels }
+     */
+    _userFilters = new Map();
+
+    /**
+     * Delivery receipt store.
+     * receiptToken -> { userId, eventId, status, attempts, lastAttempt }
+     */
+    _deliveryReceipts = new Map();
+
+    /**
+     * Retry queue for failed deliveries.
+     * [{ receiptToken, event, userId, attempt, nextRetry }]
+     */
+    _retryQueue = [];
+
+    /**
+     * Set per-user notification filter preferences.
+     * @param {string} userId
+     * @param {Object} prefs  - { minPriority, allowedTypes, channels }
+     */
+    setUserFilter(userId, prefs = {}) {
+        this._userFilters.set(userId, {
+            minPriority: prefs.minPriority ?? 0,
+            allowedTypes: prefs.allowedTypes ?? null, // null = allow all
+            channels: prefs.channels ?? ['socket', 'push'],       // which pipelines
+            digestMode: prefs.digestMode ?? false // batch into digest vs immediate
+        });
+    }
+
+    /**
+     * Get user filter preferences.
+     */
+    getUserFilter(userId) {
+        return this._userFilters.get(userId) || { minPriority: 0, allowedTypes: null, channels: ['socket', 'push'], digestMode: false };
+    }
+
+    /**
+     * Test whether an event passes a user's filter.
+     * @param {string} userId
+     * @param {Object} event
+     * @returns {boolean}
+     */
+    eventPassesFilter(userId, event) {
+        const filter = this.getUserFilter(userId);
+        if ((event.priority || 0) < filter.minPriority) return false;
+        if (filter.allowedTypes && !filter.allowedTypes.includes(event.type)) return false;
+        return true;
+    }
+
+    /**
+     * Calculate a composite delivery priority score for an event.
+     * Score factors: base priority (40%) + recency (30%) + trending (30%).
+     * @param {Object} event
+     * @returns {number} 0-10 score
+     */
+    calculateDeliveryPriority(event) {
+        const base = Math.min(10, (event.priority || 0) * 1.2);
+        const recency = Math.max(0, 10 - Math.floor((Date.now() - (event.processedAt || Date.now())) / 6000));  // decays per minute
+        const trending = Math.min(10, (event.trending || 0) * 10);
+        return parseFloat((base * 0.4 + recency * 0.3 + trending * 0.3).toFixed(2));
+    }
+
+    /**
+     * Issue a delivery receipt token for an outgoing notification.
+     * @param {string} userId
+     * @param {string} eventId
+     * @param {string} channel  - 'socket' | 'push' | 'email'
+     * @returns {string} receiptToken
+     */
+    issueDeliveryReceipt(userId, eventId, channel = 'socket') {
+        const token = `rcpt_${userId}_${eventId}_${Date.now()}`;
+        this._deliveryReceipts.set(token, {
+            token, userId, eventId, channel,
+            status: 'pending',
+            issuedAt: Date.now(),
+            ackedAt: null,
+            attempts: 1,
+            lastAttempt: Date.now()
+        });
+        return token;
+    }
+
+    /**
+     * Acknowledge a delivery receipt (mark as delivered).
+     * @param {string} token
+     * @returns {boolean}
+     */
+    acknowledgeReceipt(token) {
+        const rcpt = this._deliveryReceipts.get(token);
+        if (!rcpt) return false;
+        rcpt.status = 'delivered';
+        rcpt.ackedAt = Date.now();
+        this.emit('receipt:acked', rcpt);
+        return true;
+    }
+
+    /**
+     * Record a delivery failure and enqueue for exponential backoff retry.
+     * @param {string} token
+     * @param {Object} event
+     * @param {string} reason
+     */
+    recordDeliveryFailure(token, event, reason = '') {
+        const rcpt = this._deliveryReceipts.get(token);
+        if (!rcpt) return;
+
+        rcpt.status = 'failed';
+        rcpt.lastFailure = reason;
+
+        const MAX_ATTEMPTS = 5;
+        if (rcpt.attempts >= MAX_ATTEMPTS) {
+            rcpt.status = 'dead_letter';
+            this.emit('receipt:dead_letter', rcpt);
+            return;
+        }
+
+        // Exponential backoff: 2^attempt * 5s
+        const delayMs = Math.pow(2, rcpt.attempts) * 5000;
+        this._retryQueue.push({
+            token, event, userId: rcpt.userId,
+            attempt: rcpt.attempts,
+            nextRetry: Date.now() + delayMs
+        });
+        rcpt.attempts++;
+        rcpt.lastAttempt = Date.now();
+        this.emit('receipt:retry_scheduled', { token, delayMs, attempt: rcpt.attempts });
+    }
+
+    /**
+     * Drain retry queue: returns items that are due for retry now.
+     * Call this on a periodic interval (e.g. every 10s).
+     * @returns {Array} items ready for retry
+     */
+    drainRetryQueue() {
+        const now = Date.now();
+        const due = this._retryQueue.filter(item => item.nextRetry <= now);
+        this._retryQueue = this._retryQueue.filter(item => item.nextRetry > now);
+        return due;
+    }
+
+    /**
+     * Get receipt states for a user (for frontend traceability panel).
+     * @param {string} userId
+     * @returns {Array}
+     */
+    getUserReceipts(userId) {
+        const results = [];
+        for (const rcpt of this._deliveryReceipts.values()) {
+            if (rcpt.userId === userId) results.push(rcpt);
+        }
+        return results.sort((a, b) => b.issuedAt - a.issuedAt).slice(0, 50);
+    }
+
+    /**
+     * Get global retry queue stats.
+     */
+    getRetryStats() {
+        const grouped = {};
+        this._retryQueue.forEach(item => {
+            grouped[item.attempt] = (grouped[item.attempt] || 0) + 1;
+        });
+        return { totalPending: this._retryQueue.length, byAttempt: grouped };
     }
 
     /**
      * Stop aggregator
      */
     stop() {
-        if (this.batchInterval) {
-            clearInterval(this.batchInterval);
-        }
-        if (this.cleanupInterval) {
-            clearInterval(this.cleanupInterval);
-        }
+        if (this.batchInterval) clearInterval(this.batchInterval);
+        if (this.cleanupInterval) clearInterval(this.cleanupInterval);
         this.flush();
     }
 }
