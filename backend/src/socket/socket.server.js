@@ -227,6 +227,9 @@ function initializeSocket(server) {
                 ...notification,
                 sentAt: Date.now(),
                 sentBy: socket.userId
+            });
+        });
+
         // ─── Issue #616: Burnout Detection ─────────────────────────────────
         // Join the team burnout monitoring room
         socket.on("join_burnout_monitor", ({ teamId }) => {
@@ -254,6 +257,8 @@ function initializeSocket(server) {
                 proposedBy: 'BURNOUT_ENGINE',
                 timestamp: Date.now()
             });
+        });
+
         // DEPENDENCY RISK: Join CVE propagation monitoring room
         socket.on("join_cve_propagation", () => {
             socket.join("cve_propagation_room");

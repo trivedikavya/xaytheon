@@ -344,7 +344,7 @@ module.exports = {
                     : capacityRatio > 1.0 ? 'AT_CAPACITY'
                         : 'HEALTHY'
         };
-    }
+    },
     scoreEstimationAccuracy,
     computeEstimationPatternHistory
 };

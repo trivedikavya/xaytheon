@@ -6,15 +6,16 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "seed": "node scripts/seed-data.js",
     "test": "jest"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "acorn": "^8.15.0",
     "@babel/parser": "^7.23.6",
     "@babel/traverse": "^7.23.6",
+    "acorn": "^8.15.0",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.66.7",
@@ -25,6 +26,7 @@
     "escodegen": "^2.1.0",
     "estraverse": "^5.3.0",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
     "ioredis": "^5.9.2",
     "jsonwebtoken": "^9.0.3",
     "lru-cache": "^6.0.0",

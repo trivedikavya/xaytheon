@@ -1,0 +1,55 @@
+##############################################
+#  Xaytheon — Docker Compose (one-command)
+#
+#  Usage:
+#    docker-compose up --build
+#
+#  This starts:
+#    1. Redis (for analytics queue / BullMQ)
+#    2. Backend API (Node.js on port 5000)
+#    3. Frontend (static files served on port 8080)
+##############################################
+
+services:
+
+  # ─── Redis ───────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─── Backend ─────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - backend-data:/app/backend   # persist SQLite DB across restarts
+
+  # ─── Frontend (static file server) ──────────
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+
+volumes:
+  backend-data:

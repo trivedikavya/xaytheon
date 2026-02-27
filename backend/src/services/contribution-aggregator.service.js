@@ -1,5 +1,4 @@
 
-const consistencyScore = calculateConsistencyScore(contributions);
 const cacheService = require('./cache.service');
 
 class ContributionAggregatorService {
@@ -62,7 +61,7 @@ class ContributionAggregatorService {
                     stats: {
                         total,
                         currentStreak,
-                        consistencyScore,
+                        consistencyScore: 0,  // calculated dynamically when needed
                         maxStreak,
                         startDate: startDate.toISOString().split('T')[0],
                         endDate: todayKey
@@ -181,6 +180,8 @@ class ContributionAggregatorService {
         }
 
         return buckets;
+    }
+
     /**
      * Context-Switch Cost Model (Issue #619)
      * Estimates productivity loss based on how many parallel tasks a contributor

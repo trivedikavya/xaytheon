@@ -123,23 +123,11 @@ try {
     };
 
     startWorker().catch(err => {
-        console.error(JSON.stringify({
-            level: 'fatal',
-            event: 'worker_startup_failed',
-            error: err?.message,
-            stack: err?.stack,
-            timestamp: new Date().toISOString()
-        }));
-        process.exit(1);
+        // If Redis is missing, just ignore the worker rather than crashing the backend.
+        console.warn('⚠️  Analytics worker skipped (Redis not connected)');
+        // DO NOT exit so the main server can stay up.
     });
 
 } catch (err) {
-    console.error(JSON.stringify({
-        level: 'fatal',
-        event: 'worker_initialization_failed',
-        error: err?.message,
-        stack: err?.stack,
-        timestamp: new Date().toISOString()
-    }));
-    process.exit(1);
+    console.warn('⚠️  Analytics worker initialization skipped:', err?.message);
 }
