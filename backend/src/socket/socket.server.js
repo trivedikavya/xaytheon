@@ -194,27 +194,26 @@ function initializeSocket(server) {
             });
         });
 
-        // \u2500\u2500\u2500 Issue #615: Unified Notification Engine \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-        // Client ACKs a received notification (delivery receipt confirmation)
-        socket.on("notification_ack", ({ receiptToken }) => {
-            if (!receiptToken) return;
-            // Broadcast receipt update to admin monitors on the same user's room
-            io.to(`user:${socket.userId}`).emit("receipt_update", {
-                receiptToken,
-                status: 'delivered',
-                ackedAt: Date.now(),
-                ackedBy: socket.id
-            });
-            console.log(`✅ notification_ack from ${socket.userId}: ${receiptToken}`);
+        // GOVERNANCE: Join governance monitors
+        socket.on("join_governance", () => {
+            socket.join("governance_room");
+            console.log(`⚖️ User ${socket.userId} joined Governance Hub`);
         });
 
-        // Client requests an immediate digest flush (instead of waiting for window)
-        socket.on("digest_flush", ({ windowId } = {}) => {
-            // Server emits the flushed bundle back to this socket only
-            socket.emit("digest_ready", {
-                windowId: windowId || `flush_${Date.now()}`,
-                flushedAt: Date.now(),
-                message: 'Digest window force-flushed. Fetch /api/notifications/digest for bundle.'
+        // GOVERNANCE: Broadcast new proposal
+        socket.on("proposal_created", (proposal) => {
+            io.to("governance_room").emit("new_resolution", {
+                ...proposal,
+                serverTime: Date.now()
+            });
+        });
+
+        // GOVERNANCE: Vote update
+        socket.on("vote_cast", (data) => {
+            io.to("governance_room").emit("resolution_vote_update", {
+                proposalId: data.proposalId,
+                currentVotes: data.currentVotes,
+                totalNeeded: data.totalNeeded
             });
         });
 
