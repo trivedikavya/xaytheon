@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - XAYTHEON</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css?v=1.0.0">
+  
+  <style>
+    /* Internal CSS for page-specific layout */
+    .legal-content {
+      padding: 120px 20px 80px;
+      max-width: 850px;
+      margin: 0 auto;
+      color: var(--text-primary);
+      position: relative;
+      z-index: 1;
+    }
+
+    .legal-header {
+      margin-bottom: 40px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 20px;
+    }
+
+    .legal-header h1 {
+      font-family: "OriginTech", sans-serif;
+      font-size: 2.5rem;
+      color: var(--accent-blue);
+      letter-spacing: 2px;
+    }
+
+    .last-updated {
+      font-size: 0.9rem;
+      opacity: 0.6;
+      font-family: monospace;
+    }
+
+    .legal-section {
+      margin-bottom: 30px;
+    }
+
+    .legal-section h2 {
+      font-family: "Eightgon", sans-serif;
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      color: var(--text-primary);
+    }
+
+    .legal-section p {
+      line-height: 1.8;
+      opacity: 0.85;
+      margin-bottom: 15px;
+    }
+
+    .legal-list {
+      margin-left: 20px;
+      margin-bottom: 15px;
+      opacity: 0.85;
+    }
+
+    .legal-list li {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+  </style>
+  <script src="theme.js?v=1.0.0"></script>
+</head>
+<body>
+  <div class="canvas-container">
+    <canvas id="three-canvas"></canvas>
+  </div>
+
+  <div class="content">
+    <div id="header-placeholder"></div>
+
+    <main class="legal-content">
+      <header class="legal-header">
+        <h1 data-i18n="legal.privacy.title">Privacy Policy</h1>
+        <p class="last-updated">Last Updated: February 2026</p>
+      </header>
+
+      <section class="legal-section">
+        <h2 data-i18n="legal.privacy.section1">1. Information We Collect</h2>
+        <p>XAYTHEON is designed to help you track GitHub growth. To provide our services, we collect:</p>
+        <ul class="legal-list">
+          <li><strong>GitHub Data:</strong> Public profile information, contribution history, and repository metadata accessed via the GitHub API.</li>
+          <li><strong>Usage Data:</strong> Information on how you interact with our analytics tools and 3D visualizations.</li>
+          <li><strong>Preferences:</strong> Theme settings and language selections stored locally on your device.</li>
+        </ul>
+      </section>
+
+      <section class="legal-section">
+        <h2 data-i18n="legal.privacy.section2">2. How Data is Handled</h2>
+        <p>Your privacy is paramount. We handle your data according to these principles:</p>
+        <ul class="legal-list">
+          <li>We do not store your GitHub passwords or private authentication tokens on our servers.</li>
+          <li>Analytics are processed locally or via secured API calls to provide real-time insights.</li>
+          <li>Personalization data (like dark mode preference) stays in your browser's local storage.</li>
+        </ul>
+      </section>
+    </main>
+
+    <div id="footer-placeholder"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="boilerplate/boilerplate-loader.js?v=1.0.0"></script>
+  <script src="script.js?v=1.0.0"></script>
+</body>
+</html>
